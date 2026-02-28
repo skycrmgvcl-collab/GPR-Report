@@ -65,9 +65,14 @@ def generate_word_form(data):
     table.style = "Table Grid"
 
     for key, value in data.items():
+
         row = table.add_row().cells
         row[0].text = str(key)
         row[1].text = str(value)
+
+    doc.add_paragraph("\nSurvey Category: __________________")
+    doc.add_paragraph("Feeder Name: __________________")
+    doc.add_paragraph("Date of Survey: __________________")
 
     doc.add_paragraph("\nSite Sketch:\n")
     doc.add_paragraph("\n" * 10)
@@ -102,23 +107,24 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # CLEAN
+    # CLEAN TEXT
     df["SR Type"] = df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"] = df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
     df["SR Status"] = df["SR Status"].astype(str).str.strip()
 
-    # REMOVE EXCLUDED
+    # REMOVE ALWAYS EXCLUDED
     df = df[df["SR Type"].str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].str.lower() != "spa schemes"]
 
+    # SIDEBAR FILTERS
     if not show_connection_shift:
         df = df[df["SR Type"] != "Connection Shifting(Non Cons)"]
 
     if not show_pmsy:
         df = df[df["SR Type"] != "PMSY RTS"]
 
-    # FILTER UNSURVEY OPEN
+    # FILTER UNSURVEY + OPEN
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -131,7 +137,7 @@ if uploaded_file:
 
     unsurvey_df = unsurvey_df[unsurvey_columns]
 
-    # ADD SERIAL NO
+    # ADD SERIAL NUMBER
     unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df) + 1))
 
     # ADD PRINT ICON COLUMN
@@ -140,7 +146,7 @@ if uploaded_file:
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
 
     # =====================================================
-    # GRID OPTIONS
+    # GRID CONFIGURATION
     # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
@@ -150,11 +156,10 @@ if uploaded_file:
         sortable=True,
         resizable=True,
         flex=1,
-        minWidth=150
+        minWidth=140
     )
 
     gb.configure_column("Sr. No.", maxWidth=90, flex=0)
-
     gb.configure_column("Print", maxWidth=90, flex=0)
 
     gb.configure_selection("single")
@@ -173,7 +178,7 @@ if uploaded_file:
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # PRINT SECTION (DIRECT PRINT FROM ICON)
+    # PRINT FORM SECTION
     # =====================================================
 
     if selected is not None and len(selected) > 0:
@@ -185,34 +190,43 @@ if uploaded_file:
 
         st.divider()
 
-        st.subheader(f"🖨 Print Survey Form – SR Number: {row['SR Number']}")
+        printable_html = f"""
+        <div id="printable-form" style="background:white;padding:25px;">
 
-        # Proper printable layout
-        print_html = f"""
-        <div id="print-area">
-        <h2 style='text-align:center'>Electricity Connection Survey Form</h2>
-        <table border="1" style="width:100%; border-collapse:collapse;">
-        """
+        <h2 style="text-align:center;">Electricity Connection Survey Form</h2>
 
-        for col in unsurvey_columns:
-            print_html += f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>"
+        <table style="width:100%;border-collapse:collapse;" border="1">
 
-        print_html += """
+        {"".join([f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>" for col in unsurvey_columns])}
+
         <tr><td><b>Survey Category</b></td><td></td></tr>
         <tr><td><b>Feeder Name</b></td><td></td></tr>
         <tr><td><b>Date of Survey</b></td><td></td></tr>
-        <tr><td><b>Site Sketch</b></td><td height='200'></td></tr>
+        <tr><td><b>Site Sketch</b></td><td style="height:200px;"></td></tr>
+
         </table>
+
+        <br><br>
+        Signature: __________________
+
         </div>
+
+        <br>
+
+        <button onclick="window.print()" style="
+        background-color:#007BFF;
+        color:white;
+        padding:10px 20px;
+        border:none;
+        font-size:16px;
+        cursor:pointer;">
+        🖨 Print Survey Form
+        </button>
         """
 
-        st.markdown(print_html, unsafe_allow_html=True)
+        st.markdown(printable_html, unsafe_allow_html=True)
 
-        st.button(
-            "🖨 Click here and press Ctrl+P to Print"
-        )
-
-        # Word download also available
+        # WORD DOWNLOAD
         word_file = generate_word_form(row)
 
         st.download_button(
