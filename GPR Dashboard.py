@@ -5,15 +5,44 @@ st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
 st.title("⚡ SR Stage Monitoring Dashboard")
 
-# ================= FILE UPLOAD =================
 uploaded_file = st.file_uploader(
     "Upload SR Excel/CSV File",
     type=["xls", "xlsx", "csv"]
 )
 
+# =========================================================
+# REQUIRED COLUMNS FOR UNSURVEY TAB
+# =========================================================
+
+required_columns = [
+    "Name Of Subdivision",
+    "SR Number",
+    "SR Type",
+    "Name Of Applicant",
+    "Address1",
+    "Address2",
+    "District",
+    "Taluka",
+    "Village Or City",
+    "Consumer Category",
+    "Sub Category",
+    "Name Of Scheme",
+    "Demand Load",
+    "Load Uom",
+    "Tariff",
+    "RC Date",
+    "RC MR NO",
+    "RC Charge",
+    "SR Status",
+    "Rev Land Syrvey No"
+]
+
+# =========================================================
+# READ FILE
+# =========================================================
+
 if uploaded_file is not None:
 
-    # ================= READ FILE =================
     try:
         if uploaded_file.name.lower().endswith(".csv"):
             df = pd.read_csv(uploaded_file)
@@ -28,128 +57,158 @@ if uploaded_file is not None:
         st.error(f"Error reading file: {e}")
         st.stop()
 
-    # ================= REMOVE EXCLUDED RECORDS =================
+    # =====================================================
+    # REMOVE EXCLUDED DATA
+    # =====================================================
 
-    # Remove SR Type = Change of Name
     if "SR Type" in df.columns:
-        df = df[
-            df["SR Type"]
-            .astype(str)
-            .str.strip()
-            .str.lower() != "change of name"
-        ]
+        df = df[df["SR Type"].astype(str).str.strip().str.lower() != "change of name"]
 
-    # Remove Name Of Scheme = SPA Schemes
     if "Name Of Scheme" in df.columns:
-        df = df[
-            df["Name Of Scheme"]
-            .astype(str)
-            .str.strip()
-            .str.lower() != "spa schemes"
-        ]
+        df = df[df["Name Of Scheme"].astype(str).str.strip().str.lower() != "spa schemes"]
 
-    # ================= DATE CONVERSION =================
+    # =====================================================
+    # DATE CONVERSION
+    # =====================================================
 
-    date_cols = [
-        "Date Of Survey",
-        "Date Of Est Appr Launch",
-        "Date Of FQ Issued",
-        "Date Of FQ Paid"
-    ]
+    if "RC Date" in df.columns:
+        df["RC Date"] = pd.to_datetime(df["RC Date"], errors="coerce")
 
-    for col in date_cols:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
-
-    # ================= CLEAN SURVEY CATEGORY =================
-
-    if "Survey Category" in df.columns:
-        df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
-    else:
-        st.error("Survey Category column not found")
-        st.stop()
-
-    # ================= CREATE TABS =================
+    # =====================================================
+    # TABS
+    # =====================================================
 
     tab1, tab2, tab3 = st.tabs([
         "📝 Unsurvey Applications",
-        "📄 FQ Pending Applications",
-        "💰 Paid Pending Applications"
+        "📄 FQ Pending",
+        "💰 Paid Pending"
     ])
 
     # =====================================================
-    # TAB 1 — UNSURVEY
+    # UNSURVEY TAB WITH OPEN STATUS
     # =====================================================
 
     with tab1:
 
-        st.subheader("Unsurvey Applications")
+        st.subheader("Unsurvey Applications (OPEN status only)")
 
         unsurvey_df = df[
-            df["Survey Category"].isna()
-            | (df["Survey Category"] == "")
-            | (df["Survey Category"].str.lower() == "nan")
+            (
+                df["Survey Category"].isna()
+                | (df["Survey Category"].astype(str).str.strip() == "")
+                | (df["Survey Category"].astype(str).str.lower() == "nan")
+            )
+            &
+            (df["SR Status"].astype(str).str.upper() == "OPEN")
         ]
 
-        st.metric("Total Unsurvey", len(unsurvey_df))
+        # Select only required columns
+        unsurvey_df = unsurvey_df[required_columns]
 
-        st.dataframe(unsurvey_df, use_container_width=True)
+        st.metric("Total Unsurvey OPEN Applications", len(unsurvey_df))
 
-        st.download_button(
-            "Download Unsurvey List",
-            unsurvey_df.to_csv(index=False),
-            "unsurvey_list.csv",
-            mime="text/csv"
-        )
+        # =================================================
+        # DISPLAY TABLE WITH SURVEY BUTTON
+        # =================================================
+
+        for index, row in unsurvey_df.iterrows():
+
+            col1, col2 = st.columns([10, 1])
+
+            with col1:
+                st.write(
+                    f"**SR Number:** {row['SR Number']} | "
+                    f"**Applicant:** {row['Name Of Applicant']} | "
+                    f"**Village:** {row['Village Or City']} | "
+                    f"**Load:** {row['Demand Load']} {row['Load Uom']}"
+                )
+
+            with col2:
+                if st.button("📋", key=f"survey_{index}"):
+
+                    st.session_state["selected_sr"] = row.to_dict()
+
+        # =================================================
+        # SURVEY FORM
+        # =================================================
+
+        if "selected_sr" in st.session_state:
+
+            st.divider()
+            st.subheader("📋 Survey Form")
+
+            sr = st.session_state["selected_sr"]
+
+            with st.form("survey_form"):
+
+                subdivision = st.text_input(
+                    "Subdivision",
+                    sr.get("Name Of Subdivision", "")
+                )
+
+                sr_number = st.text_input(
+                    "SR Number",
+                    sr.get("SR Number", "")
+                )
+
+                applicant = st.text_input(
+                    "Applicant Name",
+                    sr.get("Name Of Applicant", "")
+                )
+
+                village = st.text_input(
+                    "Village",
+                    sr.get("Village Or City", "")
+                )
+
+                load = st.text_input(
+                    "Demand Load",
+                    str(sr.get("Demand Load", ""))
+                )
+
+                survey_category = st.selectbox(
+                    "Survey Category",
+                    ["A", "B", "C", "D"]
+                )
+
+                remarks = st.text_area("Survey Remarks")
+
+                submit = st.form_submit_button("Submit Survey")
+
+                if submit:
+
+                    st.success("Survey submitted successfully")
 
     # =====================================================
-    # TAB 2 — FQ PENDING
+    # FQ PENDING TAB
     # =====================================================
 
     with tab2:
 
-        st.subheader("FQ Pending Applications")
-
         fq_pending_df = df[
             (df["Survey Category"].notna())
-            & (df["Survey Category"] != "")
-            & (df["Survey Category"].str.lower() != "nan")
-            & (df["Date Of FQ Issued"].isna())
+            &
+            (df["Date Of FQ Issued"].isna())
         ]
 
-        st.metric("Total FQ Pending", len(fq_pending_df))
+        st.metric("FQ Pending", len(fq_pending_df))
 
-        st.dataframe(fq_pending_df, use_container_width=True)
-
-        st.download_button(
-            "Download FQ Pending List",
-            fq_pending_df.to_csv(index=False),
-            "fq_pending_list.csv",
-            mime="text/csv"
-        )
+        st.dataframe(fq_pending_df)
 
     # =====================================================
-    # TAB 3 — PAID PENDING (FQ PAID NOT NULL)
+    # PAID PENDING TAB
     # =====================================================
 
     with tab3:
-
-        st.subheader("Paid Pending Applications (FQ Paid Done)")
 
         paid_pending_df = df[
             df["Date Of FQ Paid"].notna()
         ]
 
-        st.metric("Total Paid Pending", len(paid_pending_df))
+        st.metric("Paid Pending", len(paid_pending_df))
 
-        st.dataframe(paid_pending_df, use_container_width=True)
-
-        st.download_button(
-            "Download Paid Pending List",
-            paid_pending_df.to_csv(index=False),
-            "paid_pending_list.csv",
-            mime="text/csv"
-        )
+        st.dataframe(paid_pending_df)
 
 else:
-    st.info("Please upload Excel or CSV file")
+
+    st.info("Upload Excel or CSV file")
