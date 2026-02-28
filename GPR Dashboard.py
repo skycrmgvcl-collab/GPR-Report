@@ -4,6 +4,7 @@ from io import BytesIO
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
@@ -51,7 +52,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD GENERATOR
+# WORD GENERATOR (Signature stays on page 1)
 # =====================================================
 
 def generate_word_form(data):
@@ -74,8 +75,9 @@ def generate_word_form(data):
     doc.add_paragraph("Feeder Name: __________________")
     doc.add_paragraph("Date of Survey: __________________")
 
-    doc.add_paragraph("\nSite Sketch:\n")
-    doc.add_paragraph("\n" * 10)
+    # Controlled sketch space
+    doc.add_paragraph("\nSite Sketch:")
+    doc.add_paragraph("\n" * 6)
 
     doc.add_paragraph("\nSignature: __________________")
 
@@ -84,7 +86,6 @@ def generate_word_form(data):
     buffer.seek(0)
 
     return buffer
-
 
 # =====================================================
 # FILE UPLOAD
@@ -113,18 +114,17 @@ if uploaded_file:
     df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
     df["SR Status"] = df["SR Status"].astype(str).str.strip()
 
-    # REMOVE ALWAYS EXCLUDED
+    # REMOVE EXCLUDED
     df = df[df["SR Type"].str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].str.lower() != "spa schemes"]
 
-    # SIDEBAR FILTERS
     if not show_connection_shift:
         df = df[df["SR Type"] != "Connection Shifting(Non Cons)"]
 
     if not show_pmsy:
         df = df[df["SR Type"] != "PMSY RTS"]
 
-    # FILTER UNSURVEY + OPEN
+    # FILTER UNSURVEY OPEN
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -140,7 +140,7 @@ if uploaded_file:
     # ADD SERIAL NUMBER
     unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df) + 1))
 
-    # ADD PRINT ICON COLUMN
+    # ADD PRINT ICON
     unsurvey_df.insert(1, "Print", "🖨")
 
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
@@ -171,14 +171,13 @@ if uploaded_file:
         gridOptions=gridOptions,
         height=500,
         fit_columns_on_grid_load=True,
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
-        theme="streamlit"
+        update_mode=GridUpdateMode.SELECTION_CHANGED
     )
 
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # PRINT FORM SECTION
+    # PRINT FORM (FIXED - NOT BLANK)
     # =====================================================
 
     if selected is not None and len(selected) > 0:
@@ -188,43 +187,74 @@ if uploaded_file:
         else:
             row = selected[0]
 
-        st.divider()
+        print_html = f"""
+        <html>
+        <head>
+        <style>
+        body {{
+            font-family: Arial;
+            padding: 20px;
+        }}
 
-        printable_html = f"""
-        <div id="printable-form" style="background:white;padding:25px;">
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+
+        td {{
+            border: 1px solid black;
+            padding: 6px;
+        }}
+
+        .sketch {{
+            height: 200px;
+        }}
+
+        .print-btn {{
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }}
+
+        @media print {{
+            .print-btn {{
+                display: none;
+            }}
+        }}
+        </style>
+        </head>
+
+        <body>
 
         <h2 style="text-align:center;">Electricity Connection Survey Form</h2>
 
-        <table style="width:100%;border-collapse:collapse;" border="1">
+        <table>
 
         {"".join([f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>" for col in unsurvey_columns])}
 
         <tr><td><b>Survey Category</b></td><td></td></tr>
         <tr><td><b>Feeder Name</b></td><td></td></tr>
         <tr><td><b>Date of Survey</b></td><td></td></tr>
-        <tr><td><b>Site Sketch</b></td><td style="height:200px;"></td></tr>
+        <tr><td><b>Site Sketch</b></td><td class="sketch"></td></tr>
 
         </table>
 
         <br><br>
         Signature: __________________
 
-        </div>
-
         <br>
 
-        <button onclick="window.print()" style="
-        background-color:#007BFF;
-        color:white;
-        padding:10px 20px;
-        border:none;
-        font-size:16px;
-        cursor:pointer;">
-        🖨 Print Survey Form
-        </button>
+        <button class="print-btn" onclick="window.print()">Print</button>
+
+        </body>
+        </html>
         """
 
-        st.markdown(printable_html, unsafe_allow_html=True)
+        components.html(print_html, height=700, scrolling=True)
 
         # WORD DOWNLOAD
         word_file = generate_word_form(row)
@@ -236,4 +266,5 @@ if uploaded_file:
         )
 
 else:
+
     st.info("Upload file to begin")
