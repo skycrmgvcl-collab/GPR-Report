@@ -102,7 +102,7 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # CLEAN TEXT
+    # CLEAN TEXT COLUMNS
     df["SR Type"] = df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"] = df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
@@ -119,7 +119,7 @@ if uploaded_file:
     if not show_pmsy:
         df = df[df["SR Type"] != "PMSY RTS"]
 
-    # UNSURVEY + OPEN FILTER
+    # FILTER UNSURVEY + OPEN
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -132,7 +132,7 @@ if uploaded_file:
 
     unsurvey_df = unsurvey_df[unsurvey_columns]
 
-    # ADD SURVEY BUTTON COLUMN
+    # ADD SURVEY FORM COLUMN
     unsurvey_df["Survey Form"] = "Open Survey Form"
 
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
@@ -163,17 +163,16 @@ if uploaded_file:
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # EDITABLE SURVEY FORM
+    # SURVEY FORM SECTION
     # =====================================================
 
     if selected is not None and len(selected) > 0:
 
-        if selected is not None and len(selected) > 0:
-
-    if isinstance(selected, pd.DataFrame):
-        selected_row = selected.iloc[0].to_dict()
-    else:
-        selected_row = selected[0]
+        # FIX for both DataFrame and list return types
+        if isinstance(selected, pd.DataFrame):
+            selected_row = selected.iloc[0].to_dict()
+        else:
+            selected_row = selected[0]
 
         st.divider()
         st.subheader(f"📋 Survey Form — SR Number: {selected_row['SR Number']}")
@@ -186,7 +185,7 @@ if uploaded_file:
 
                 form_data[col] = st.text_input(
                     col,
-                    value=str(selected_row[col])
+                    value=str(selected_row.get(col, ""))
                 )
 
             form_data["Survey Category"] = st.selectbox(
@@ -201,6 +200,7 @@ if uploaded_file:
             generate_btn = col1.form_submit_button("📄 Generate Word Form")
             print_btn = col2.form_submit_button("🖨 Print Form")
 
+        # Generate Word
         if generate_btn:
 
             word_file = generate_word_form(form_data)
@@ -212,6 +212,7 @@ if uploaded_file:
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
 
+        # Print
         if print_btn:
 
             st.write("### Printable Survey Form")
@@ -222,4 +223,5 @@ if uploaded_file:
             st.info("Press Ctrl+P to Print")
 
 else:
+
     st.info("Upload file to begin")
