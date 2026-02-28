@@ -8,11 +8,9 @@ st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
 st.title("⚡ SR Stage Monitoring Dashboard")
 
-# ============================================================
-# REQUIRED COLUMNS FOR UNSURVEY TABLE
-# ============================================================
+# ================= REQUIRED COLUMNS =================
 
-required_columns = [
+unsurvey_columns = [
     "Name Of Subdivision",
     "SR Number",
     "SR Type",
@@ -35,9 +33,7 @@ required_columns = [
     "Rev Land Syrvey No"
 ]
 
-# ============================================================
-# FUNCTION TO GENERATE WORD FORM
-# ============================================================
+# ================= WORD FORM FUNCTION =================
 
 def generate_word_form(row):
 
@@ -49,17 +45,16 @@ def generate_word_form(row):
     table = doc.add_table(rows=0, cols=2)
     table.style = "Table Grid"
 
-    for col in required_columns:
-
+    for col in unsurvey_columns:
         tr = table.add_row().cells
         tr[0].text = col
         tr[1].text = str(row[col])
 
     doc.add_paragraph("")
-    doc.add_paragraph("Survey Category: ______________________")
-    doc.add_paragraph("Survey Remarks: ______________________")
+    doc.add_paragraph("Survey Category: __________________")
+    doc.add_paragraph("Survey Remarks: __________________")
     doc.add_paragraph("")
-    doc.add_paragraph("Signature: ______________________")
+    doc.add_paragraph("Signature: __________________")
 
     buffer = BytesIO()
     doc.save(buffer)
@@ -68,119 +63,133 @@ def generate_word_form(row):
     return buffer
 
 
-# ============================================================
-# FILE UPLOAD
-# ============================================================
+# ================= FILE UPLOAD =================
 
 uploaded_file = st.file_uploader(
     "Upload SR Excel/CSV File",
-    type=["xlsx", "xls", "csv"]
+    type=["xls", "xlsx", "csv"]
 )
 
 if uploaded_file is not None:
 
-    # READ FILE
+    # ================= READ FILE =================
 
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
+    try:
+        if uploaded_file.name.lower().endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
 
-    elif uploaded_file.name.endswith(".xlsx"):
-        df = pd.read_excel(uploaded_file, engine="openpyxl")
+        elif uploaded_file.name.lower().endswith(".xlsx"):
+            df = pd.read_excel(uploaded_file, engine="openpyxl")
 
-    else:
-        df = pd.read_excel(uploaded_file, engine="xlrd")
+        elif uploaded_file.name.lower().endswith(".xls"):
+            df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # REMOVE EXCLUDED RECORDS
+    except Exception as e:
+        st.error(f"Error reading file: {e}")
+        st.stop()
+
+    # ================= REMOVE EXCLUDED RECORDS =================
 
     df = df[df["SR Type"].astype(str).str.strip().str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].astype(str).str.strip().str.lower() != "spa schemes"]
 
-    # FORMAT DATE
+    # ================= DATE CONVERSION =================
 
-    df["RC Date"] = pd.to_datetime(df["RC Date"], errors="coerce")
+    date_cols = [
+        "Date Of Survey",
+        "Date Of Est Appr Launch",
+        "Date Of FQ Issued",
+        "Date Of FQ Paid"
+    ]
 
-    # CREATE TABS
+    for col in date_cols:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+    # ================= CLEAN SURVEY CATEGORY =================
+
+    df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
+
+    # ================= CREATE TABS =================
 
     tab1, tab2, tab3 = st.tabs([
         "📝 Unsurvey Applications",
-        "📄 FQ Pending",
-        "💰 Paid Pending"
+        "📄 FQ Pending Applications",
+        "💰 Paid Pending Applications"
     ])
 
-    # ========================================================
-    # TAB 1 — UNSURVEY TABLE FORMAT
-    # ========================================================
+    # =====================================================
+    # TAB 1 — UNSURVEY TABLE (ONLY REQUIRED COLUMNS)
+    # =====================================================
 
     with tab1:
+
+        st.subheader("Unsurvey Applications")
 
         unsurvey_df = df[
             (
                 df["Survey Category"].isna()
-                | (df["Survey Category"].astype(str).str.strip() == "")
-                | (df["Survey Category"].astype(str).str.lower() == "nan")
+                | (df["Survey Category"] == "")
+                | (df["Survey Category"].str.lower() == "nan")
             )
             &
-            (df["SR Status"].astype(str).str.upper() == "OPEN")
+            (df["SR Status"].str.upper() == "OPEN")
         ]
 
-        unsurvey_df = unsurvey_df[required_columns]
+        unsurvey_df = unsurvey_df[unsurvey_columns]
 
-        st.metric("Total Unsurvey OPEN", len(unsurvey_df))
+        st.metric("Total Unsurvey", len(unsurvey_df))
 
-        # SHOW TABLE
+        # DISPLAY TABLE
         st.dataframe(unsurvey_df, use_container_width=True)
 
-        st.write("### Generate Survey Form")
+        # SURVEY FORM ICON COLUMN BELOW TABLE
+        st.write("### Survey Form")
 
-        # ICON BUTTONS BELOW TABLE
+        cols = st.columns(len(unsurvey_df))
 
-        for index, row in unsurvey_df.iterrows():
+        for i, row in unsurvey_df.iterrows():
 
-            col1, col2 = st.columns([6,1])
+            word_file = generate_word_form(row)
 
-            with col1:
-                st.write(
-                    f"SR: {row['SR Number']} | Applicant: {row['Name Of Applicant']} | Village: {row['Village Or City']}"
-                )
+            st.download_button(
+                label=f"📄 SR {row['SR Number']}",
+                data=word_file,
+                file_name=f"Survey_Form_{row['SR Number']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
 
-            with col2:
-
-                word_file = generate_word_form(row)
-
-                st.download_button(
-                    "📄",
-                    word_file,
-                    file_name=f"Survey_{row['SR Number']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key=f"btn_{index}"
-                )
-
-    # ========================================================
+    # =====================================================
     # TAB 2 — FQ PENDING
-    # ========================================================
+    # =====================================================
 
     with tab2:
 
-        fq_pending = df[
+        fq_pending_df = df[
             (df["Survey Category"].notna())
-            &
-            (df["Date Of FQ Issued"].isna())
+            & (df["Survey Category"] != "")
+            & (df["Survey Category"].str.lower() != "nan")
+            & (df["Date Of FQ Issued"].isna())
         ]
 
-        st.dataframe(fq_pending, use_container_width=True)
+        st.metric("Total FQ Pending", len(fq_pending_df))
 
-    # ========================================================
+        st.dataframe(fq_pending_df, use_container_width=True)
+
+    # =====================================================
     # TAB 3 — PAID PENDING
-    # ========================================================
+    # =====================================================
 
     with tab3:
 
-        paid_pending = df[
+        paid_pending_df = df[
             df["Date Of FQ Paid"].notna()
         ]
 
-        st.dataframe(paid_pending, use_container_width=True)
+        st.metric("Total Paid Pending", len(paid_pending_df))
+
+        st.dataframe(paid_pending_df, use_container_width=True)
 
 else:
 
-    st.info("Upload Excel or CSV file")
+    st.info("Please upload Excel or CSV file")
