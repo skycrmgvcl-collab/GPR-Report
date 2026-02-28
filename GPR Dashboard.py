@@ -168,6 +168,11 @@ if uploaded_file:
 
     if selected is not None and len(selected) > 0:
 
+        if selected is not None and len(selected) > 0:
+
+    if isinstance(selected, pd.DataFrame):
+        selected_row = selected.iloc[0].to_dict()
+    else:
         selected_row = selected[0]
 
         st.divider()
