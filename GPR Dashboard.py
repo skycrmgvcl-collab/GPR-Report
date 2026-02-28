@@ -1,18 +1,17 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
 st.title("⚡ SR Stage Monitoring Dashboard")
 
-uploaded_file = st.file_uploader(
-    "Upload SR Excel/CSV File",
-    type=["xls", "xlsx", "csv"]
-)
-
-# =========================================================
-# REQUIRED COLUMNS FOR UNSURVEY TAB
-# =========================================================
+# =====================================================
+# REQUIRED COLUMNS
+# =====================================================
 
 required_columns = [
     "Name Of Subdivision",
@@ -37,60 +36,93 @@ required_columns = [
     "Rev Land Syrvey No"
 ]
 
-# =========================================================
-# READ FILE
-# =========================================================
+# =====================================================
+# WORD FORM GENERATOR
+# =====================================================
+
+def generate_survey_form(data):
+
+    doc = Document()
+
+    # Title
+    title = doc.add_heading("Electricity Connection Survey Form", 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    doc.add_paragraph()
+
+    table = doc.add_table(rows=0, cols=2)
+    table.style = "Table Grid"
+
+    for key, value in data.items():
+
+        row = table.add_row().cells
+
+        row[0].text = str(key)
+
+        row[1].text = str(value)
+
+    doc.add_paragraph()
+    doc.add_paragraph("Survey Category: _______________________")
+    doc.add_paragraph("Survey Remarks: _______________________")
+    doc.add_paragraph()
+    doc.add_paragraph("Signature: _______________________")
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    return buffer
+
+# =====================================================
+# FILE UPLOAD
+# =====================================================
+
+uploaded_file = st.file_uploader(
+    "Upload SR Excel/CSV File",
+    type=["xls", "xlsx", "csv"]
+)
 
 if uploaded_file is not None:
 
-    try:
-        if uploaded_file.name.lower().endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
+    # READ FILE
 
-        elif uploaded_file.name.lower().endswith(".xlsx"):
-            df = pd.read_excel(uploaded_file, engine="openpyxl")
+    if uploaded_file.name.endswith(".csv"):
 
-        elif uploaded_file.name.lower().endswith(".xls"):
-            df = pd.read_excel(uploaded_file, engine="xlrd")
+        df = pd.read_csv(uploaded_file)
 
-    except Exception as e:
-        st.error(f"Error reading file: {e}")
-        st.stop()
+    elif uploaded_file.name.endswith(".xlsx"):
 
-    # =====================================================
+        df = pd.read_excel(uploaded_file, engine="openpyxl")
+
+    else:
+
+        df = pd.read_excel(uploaded_file, engine="xlrd")
+
     # REMOVE EXCLUDED DATA
-    # =====================================================
 
-    if "SR Type" in df.columns:
-        df = df[df["SR Type"].astype(str).str.strip().str.lower() != "change of name"]
+    df = df[df["SR Type"].astype(str).str.strip().str.lower() != "change of name"]
 
-    if "Name Of Scheme" in df.columns:
-        df = df[df["Name Of Scheme"].astype(str).str.strip().str.lower() != "spa schemes"]
+    df = df[df["Name Of Scheme"].astype(str).str.strip().str.lower() != "spa schemes"]
 
-    # =====================================================
-    # DATE CONVERSION
-    # =====================================================
+    # DATE FORMAT
 
-    if "RC Date" in df.columns:
-        df["RC Date"] = pd.to_datetime(df["RC Date"], errors="coerce")
+    df["RC Date"] = pd.to_datetime(df["RC Date"], errors="coerce").dt.strftime("%d-%m-%Y")
 
     # =====================================================
     # TABS
     # =====================================================
 
-    tab1, tab2, tab3 = st.tabs([
-        "📝 Unsurvey Applications",
-        "📄 FQ Pending",
-        "💰 Paid Pending"
-    ])
+    tab1, tab2, tab3 = st.tabs(
+        ["📝 Unsurvey Applications", "📄 FQ Pending", "💰 Paid Pending"]
+    )
 
     # =====================================================
-    # UNSURVEY TAB WITH OPEN STATUS
+    # UNSURVEY TABLE
     # =====================================================
 
     with tab1:
 
-        st.subheader("Unsurvey Applications (OPEN status only)")
+        st.subheader("Unsurvey Applications (OPEN Only)")
 
         unsurvey_df = df[
             (
@@ -102,113 +134,56 @@ if uploaded_file is not None:
             (df["SR Status"].astype(str).str.upper() == "OPEN")
         ]
 
-        # Select only required columns
         unsurvey_df = unsurvey_df[required_columns]
 
-        st.metric("Total Unsurvey OPEN Applications", len(unsurvey_df))
+        st.metric("Total Unsurvey OPEN", len(unsurvey_df))
 
-        # =================================================
-        # DISPLAY TABLE WITH SURVEY BUTTON
-        # =================================================
+        # SHOW TABLE WITH DOWNLOAD ICON
 
-        for index, row in unsurvey_df.iterrows():
+        for i, row in unsurvey_df.iterrows():
 
-            col1, col2 = st.columns([10, 1])
+            cols = st.columns([10,1])
 
-            with col1:
-                st.write(
-                    f"**SR Number:** {row['SR Number']} | "
-                    f"**Applicant:** {row['Name Of Applicant']} | "
-                    f"**Village:** {row['Village Or City']} | "
-                    f"**Load:** {row['Demand Load']} {row['Load Uom']}"
+            with cols[0]:
+
+                st.dataframe(pd.DataFrame([row]), use_container_width=True)
+
+            with cols[1]:
+
+                word_file = generate_survey_form(row.to_dict())
+
+                st.download_button(
+                    label="📄",
+                    data=word_file,
+                    file_name=f"Survey_Form_{row['SR Number']}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=i
                 )
-
-            with col2:
-                if st.button("📋", key=f"survey_{index}"):
-
-                    st.session_state["selected_sr"] = row.to_dict()
-
-        # =================================================
-        # SURVEY FORM
-        # =================================================
-
-        if "selected_sr" in st.session_state:
-
-            st.divider()
-            st.subheader("📋 Survey Form")
-
-            sr = st.session_state["selected_sr"]
-
-            with st.form("survey_form"):
-
-                subdivision = st.text_input(
-                    "Subdivision",
-                    sr.get("Name Of Subdivision", "")
-                )
-
-                sr_number = st.text_input(
-                    "SR Number",
-                    sr.get("SR Number", "")
-                )
-
-                applicant = st.text_input(
-                    "Applicant Name",
-                    sr.get("Name Of Applicant", "")
-                )
-
-                village = st.text_input(
-                    "Village",
-                    sr.get("Village Or City", "")
-                )
-
-                load = st.text_input(
-                    "Demand Load",
-                    str(sr.get("Demand Load", ""))
-                )
-
-                survey_category = st.selectbox(
-                    "Survey Category",
-                    ["A", "B", "C", "D"]
-                )
-
-                remarks = st.text_area("Survey Remarks")
-
-                submit = st.form_submit_button("Submit Survey")
-
-                if submit:
-
-                    st.success("Survey submitted successfully")
 
     # =====================================================
-    # FQ PENDING TAB
+    # FQ PENDING
     # =====================================================
 
     with tab2:
 
-        fq_pending_df = df[
+        fq_pending = df[
             (df["Survey Category"].notna())
             &
             (df["Date Of FQ Issued"].isna())
         ]
 
-        st.metric("FQ Pending", len(fq_pending_df))
-
-        st.dataframe(fq_pending_df)
+        st.dataframe(fq_pending)
 
     # =====================================================
-    # PAID PENDING TAB
+    # PAID PENDING
     # =====================================================
 
     with tab3:
 
-        paid_pending_df = df[
-            df["Date Of FQ Paid"].notna()
-        ]
+        paid_pending = df[df["Date Of FQ Paid"].notna()]
 
-        st.metric("Paid Pending", len(paid_pending_df))
-
-        st.dataframe(paid_pending_df)
+        st.dataframe(paid_pending)
 
 else:
 
-    st.info("Upload Excel or CSV file")
+    st.info("Upload file to continue")
