@@ -10,13 +10,18 @@ st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 st.title("⚡ SR Stage Monitoring Dashboard")
 
 # =====================================================
-# SIDEBAR FILTER
+# SIDEBAR FILTERS
 # =====================================================
 
-st.sidebar.header("Filter Options")
+st.sidebar.header("SR Type Filter")
 
-include_special = st.sidebar.checkbox(
-    "Include Connection Shifting(Non Cons) & PMSY RTS",
+show_connection_shift = st.sidebar.checkbox(
+    "Connection Shifting (Non Cons)",
+    value=False
+)
+
+show_pmsy = st.sidebar.checkbox(
+    "PMSY RTS",
     value=False
 )
 
@@ -48,7 +53,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD GENERATOR
+# WORD FORM GENERATOR
 # =====================================================
 
 def generate_word_form(data):
@@ -67,6 +72,9 @@ def generate_word_form(data):
         row[1].text = str(value)
 
     doc.add_paragraph("")
+    doc.add_paragraph("Survey Category: __________________")
+    doc.add_paragraph("Remarks: __________________")
+    doc.add_paragraph("")
     doc.add_paragraph("Signature: __________________")
 
     buffer = BytesIO()
@@ -74,6 +82,7 @@ def generate_word_form(data):
     buffer.seek(0)
 
     return buffer
+
 
 # =====================================================
 # FILE UPLOAD
@@ -96,21 +105,25 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # REMOVE EXCLUDED TYPES
+    # REMOVE CHANGE OF NAME & SPA SCHEMES
     df = df[df["SR Type"].astype(str).str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].astype(str).str.lower() != "spa schemes"]
 
-    if not include_special:
-        df = df[
-            ~df["SR Type"].isin([
-                "Connection Shifting(Non Cons)",
-                "PMSY RTS"
-            ])
-        ]
+    # APPLY SIDEBAR FILTERS
 
-    df["Survey Category"] = df["Survey Category"].astype(str)
+    mask = pd.Series([True] * len(df))
+
+    if not show_connection_shift:
+        mask &= df["SR Type"] != "Connection Shifting(Non Cons)"
+
+    if not show_pmsy:
+        mask &= df["SR Type"] != "PMSY RTS"
+
+    df = df[mask]
 
     # FILTER UNSURVEY + OPEN
+    df["Survey Category"] = df["Survey Category"].astype(str)
+
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -123,10 +136,13 @@ if uploaded_file:
 
     unsurvey_df = unsurvey_df[unsurvey_columns]
 
+    # ADD SURVEY FORM COLUMN
+    unsurvey_df["Survey Form"] = "Open"
+
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
 
     # =====================================================
-    # AGGRID TABLE WITH HEADER FILTERS
+    # AGGRID TABLE WITH FILTERS AND ROW SELECTION
     # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
@@ -140,28 +156,25 @@ if uploaded_file:
 
     gridOptions = gb.build()
 
-    grid = AgGrid(
+    grid_response = AgGrid(
         unsurvey_df,
         gridOptions=gridOptions,
         height=500,
         update_mode=GridUpdateMode.SELECTION_CHANGED
     )
 
-    selected = grid["selected_rows"]
+    selected = grid_response["selected_rows"]
 
     # =====================================================
-    # EDITABLE SURVEY FORM
+    # SHOW EDITABLE SURVEY FORM FOR SELECTED ROW
     # =====================================================
 
     if selected is not None and len(selected) > 0:
 
-        selected_row = selected[0]
+        row = selected[0]
 
         st.divider()
-        st.subheader(f"📋 Survey Form – SR Number: {selected_row['SR Number']}")
-
-        if "form_data" not in st.session_state:
-            st.session_state.form_data = selected_row.copy()
+        st.subheader(f"📋 Survey Form — SR Number: {row['SR Number']}")
 
         with st.form("survey_form"):
 
@@ -171,8 +184,7 @@ if uploaded_file:
 
                 form_data[col] = st.text_input(
                     col,
-                    value=str(st.session_state.form_data.get(col, "")),
-                    key=f"field_{col}"
+                    value=str(row[col])
                 )
 
             form_data["Survey Category"] = st.selectbox(
@@ -184,30 +196,28 @@ if uploaded_file:
 
             col1, col2 = st.columns(2)
 
-            generate_btn = col1.form_submit_button("📄 Generate Word")
-            print_btn = col2.form_submit_button("🖨 Print")
+            generate = col1.form_submit_button("Generate Word Form")
+            print_btn = col2.form_submit_button("Print")
 
-        st.session_state.form_data = form_data
-
-        if generate_btn:
+        if generate:
 
             word_file = generate_word_form(form_data)
 
             st.download_button(
                 "Download Survey Form",
                 word_file,
-                file_name=f"Survey_Form_{form_data['SR Number']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                file_name=f"Survey_Form_{form_data['SR Number']}.docx"
             )
 
         if print_btn:
 
-            st.write("### Printable Survey Form")
+            st.write("### Printable Form")
 
             for key, value in form_data.items():
                 st.write(f"**{key}:** {value}")
 
-            st.info("Press Ctrl+P to Print")
+            st.info("Press Ctrl+P to print")
 
 else:
-    st.info("Upload file to begin.")
+
+    st.info("Upload file to start")
