@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from docx import Document
-from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
@@ -52,7 +51,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD FORM GENERATOR
+# WORD GENERATOR
 # =====================================================
 
 def generate_word_form(data):
@@ -70,17 +69,17 @@ def generate_word_form(data):
         row[0].text = str(key)
         row[1].text = str(value)
 
-    doc.add_paragraph("")
-    doc.add_paragraph("Site Sketch:")
+    doc.add_paragraph("\nSite Sketch:\n")
     doc.add_paragraph("\n" * 10)
 
-    doc.add_paragraph("Signature: __________________")
+    doc.add_paragraph("\nSignature: __________________")
 
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
 
     return buffer
+
 
 # =====================================================
 # FILE UPLOAD
@@ -103,7 +102,7 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # CLEAN TEXT
+    # CLEAN
     df["SR Type"] = df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"] = df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
@@ -132,16 +131,16 @@ if uploaded_file:
 
     unsurvey_df = unsurvey_df[unsurvey_columns]
 
-    # ADD SERIAL NUMBER
+    # ADD SERIAL NO
     unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df) + 1))
 
-    # ADD SURVEY ICON COLUMN
-    unsurvey_df.insert(1, "Survey Form", "📋")
+    # ADD PRINT ICON COLUMN
+    unsurvey_df.insert(1, "Print", "🖨")
 
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
 
     # =====================================================
-    # AGGRID TABLE WITH AUTO FIT
+    # GRID OPTIONS
     # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
@@ -150,8 +149,13 @@ if uploaded_file:
         filter=True,
         sortable=True,
         resizable=True,
-        autoSize=True
+        flex=1,
+        minWidth=150
     )
+
+    gb.configure_column("Sr. No.", maxWidth=90, flex=0)
+
+    gb.configure_column("Print", maxWidth=90, flex=0)
 
     gb.configure_selection("single")
 
@@ -162,77 +166,60 @@ if uploaded_file:
         gridOptions=gridOptions,
         height=500,
         fit_columns_on_grid_load=True,
-        update_mode=GridUpdateMode.SELECTION_CHANGED
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        theme="streamlit"
     )
 
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # SURVEY FORM
+    # PRINT SECTION (DIRECT PRINT FROM ICON)
     # =====================================================
 
     if selected is not None and len(selected) > 0:
 
         if isinstance(selected, pd.DataFrame):
-            selected_row = selected.iloc[0].to_dict()
+            row = selected.iloc[0].to_dict()
         else:
-            selected_row = selected[0]
+            row = selected[0]
 
         st.divider()
-        st.subheader(f"📋 Survey Form — SR Number: {selected_row['SR Number']}")
 
-        with st.form("survey_form"):
+        st.subheader(f"🖨 Print Survey Form – SR Number: {row['SR Number']}")
 
-            form_data = {}
+        # Proper printable layout
+        print_html = f"""
+        <div id="print-area">
+        <h2 style='text-align:center'>Electricity Connection Survey Form</h2>
+        <table border="1" style="width:100%; border-collapse:collapse;">
+        """
 
-            for col in unsurvey_columns:
-                form_data[col] = st.text_input(
-                    col,
-                    value=str(selected_row.get(col, ""))
-                )
+        for col in unsurvey_columns:
+            print_html += f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>"
 
-            form_data["Survey Category"] = st.selectbox(
-                "Survey Category",
-                ["", "A", "B", "C", "D"]
-            )
+        print_html += """
+        <tr><td><b>Survey Category</b></td><td></td></tr>
+        <tr><td><b>Feeder Name</b></td><td></td></tr>
+        <tr><td><b>Date of Survey</b></td><td></td></tr>
+        <tr><td><b>Site Sketch</b></td><td height='200'></td></tr>
+        </table>
+        </div>
+        """
 
-            form_data["Feeder Name"] = st.text_input("Name of Feeder")
+        st.markdown(print_html, unsafe_allow_html=True)
 
-            form_data["Date of Survey"] = st.date_input("Date of Survey")
+        st.button(
+            "🖨 Click here and press Ctrl+P to Print"
+        )
 
-            form_data["Site Sketch Description"] = st.text_area(
-                "Site Sketch Description"
-            )
+        # Word download also available
+        word_file = generate_word_form(row)
 
-            form_data["Sketch Area"] = st.text_area(
-                "Sketch Area (Use for drawing reference)",
-                height=200
-            )
-
-            col1, col2 = st.columns(2)
-
-            generate_btn = col1.form_submit_button("📄 Generate Word Form")
-            print_btn = col2.form_submit_button("🖨 Print Form")
-
-        if generate_btn:
-
-            word_file = generate_word_form(form_data)
-
-            st.download_button(
-                "Download Survey Form",
-                word_file,
-                file_name=f"Survey_Form_{form_data['SR Number']}.docx"
-            )
-
-        if print_btn:
-
-            st.write("### Printable Survey Form")
-
-            for key, value in form_data.items():
-                st.write(f"**{key}:** {value}")
-
-            st.info("Press Ctrl+P to Print")
+        st.download_button(
+            "📄 Download Word Form",
+            word_file,
+            file_name=f"Survey_Form_{row['SR Number']}.docx"
+        )
 
 else:
-
     st.info("Upload file to begin")
