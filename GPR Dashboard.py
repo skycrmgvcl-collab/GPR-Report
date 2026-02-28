@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from docx import Document
+from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
@@ -51,7 +52,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD FORM FUNCTION
+# WORD FORM GENERATOR
 # =====================================================
 
 def generate_word_form(data):
@@ -70,9 +71,9 @@ def generate_word_form(data):
         row[1].text = str(value)
 
     doc.add_paragraph("")
-    doc.add_paragraph("Survey Category: __________________")
-    doc.add_paragraph("Remarks: __________________")
-    doc.add_paragraph("")
+    doc.add_paragraph("Site Sketch:")
+    doc.add_paragraph("\n" * 10)
+
     doc.add_paragraph("Signature: __________________")
 
     buffer = BytesIO()
@@ -102,24 +103,23 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # CLEAN TEXT COLUMNS
+    # CLEAN TEXT
     df["SR Type"] = df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"] = df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
     df["SR Status"] = df["SR Status"].astype(str).str.strip()
 
-    # REMOVE ALWAYS EXCLUDED
+    # REMOVE EXCLUDED
     df = df[df["SR Type"].str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].str.lower() != "spa schemes"]
 
-    # SIDEBAR FILTERS
     if not show_connection_shift:
         df = df[df["SR Type"] != "Connection Shifting(Non Cons)"]
 
     if not show_pmsy:
         df = df[df["SR Type"] != "PMSY RTS"]
 
-    # FILTER UNSURVEY + OPEN
+    # FILTER UNSURVEY OPEN
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -132,13 +132,16 @@ if uploaded_file:
 
     unsurvey_df = unsurvey_df[unsurvey_columns]
 
-    # ADD SURVEY FORM COLUMN
-    unsurvey_df["Survey Form"] = "Open Survey Form"
+    # ADD SERIAL NUMBER
+    unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df) + 1))
+
+    # ADD SURVEY ICON COLUMN
+    unsurvey_df.insert(1, "Survey Form", "📋")
 
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
 
     # =====================================================
-    # AGGRID TABLE
+    # AGGRID TABLE WITH AUTO FIT
     # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
@@ -146,7 +149,8 @@ if uploaded_file:
     gb.configure_default_column(
         filter=True,
         sortable=True,
-        resizable=True
+        resizable=True,
+        autoSize=True
     )
 
     gb.configure_selection("single")
@@ -157,18 +161,18 @@ if uploaded_file:
         unsurvey_df,
         gridOptions=gridOptions,
         height=500,
+        fit_columns_on_grid_load=True,
         update_mode=GridUpdateMode.SELECTION_CHANGED
     )
 
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # SURVEY FORM SECTION
+    # SURVEY FORM
     # =====================================================
 
     if selected is not None and len(selected) > 0:
 
-        # FIX for both DataFrame and list return types
         if isinstance(selected, pd.DataFrame):
             selected_row = selected.iloc[0].to_dict()
         else:
@@ -182,7 +186,6 @@ if uploaded_file:
             form_data = {}
 
             for col in unsurvey_columns:
-
                 form_data[col] = st.text_input(
                     col,
                     value=str(selected_row.get(col, ""))
@@ -193,14 +196,24 @@ if uploaded_file:
                 ["", "A", "B", "C", "D"]
             )
 
-            form_data["Remarks"] = st.text_area("Remarks")
+            form_data["Feeder Name"] = st.text_input("Name of Feeder")
+
+            form_data["Date of Survey"] = st.date_input("Date of Survey")
+
+            form_data["Site Sketch Description"] = st.text_area(
+                "Site Sketch Description"
+            )
+
+            form_data["Sketch Area"] = st.text_area(
+                "Sketch Area (Use for drawing reference)",
+                height=200
+            )
 
             col1, col2 = st.columns(2)
 
             generate_btn = col1.form_submit_button("📄 Generate Word Form")
             print_btn = col2.form_submit_button("🖨 Print Form")
 
-        # Generate Word
         if generate_btn:
 
             word_file = generate_word_form(form_data)
@@ -208,11 +221,9 @@ if uploaded_file:
             st.download_button(
                 "Download Survey Form",
                 word_file,
-                file_name=f"Survey_Form_{form_data['SR Number']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                file_name=f"Survey_Form_{form_data['SR Number']}.docx"
             )
 
-        # Print
         if print_btn:
 
             st.write("### Printable Survey Form")
