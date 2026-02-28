@@ -52,7 +52,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD GENERATOR (Signature stays on page 1)
+# WORD FORM GENERATOR (ONE PAGE)
 # =====================================================
 
 def generate_word_form(data):
@@ -66,18 +66,16 @@ def generate_word_form(data):
     table.style = "Table Grid"
 
     for key, value in data.items():
-
         row = table.add_row().cells
-        row[0].text = str(key)
+        row[0].text = key
         row[1].text = str(value)
 
     doc.add_paragraph("\nSurvey Category: __________________")
     doc.add_paragraph("Feeder Name: __________________")
     doc.add_paragraph("Date of Survey: __________________")
 
-    # Controlled sketch space
     doc.add_paragraph("\nSite Sketch:")
-    doc.add_paragraph("\n" * 6)
+    doc.add_paragraph("\n" * 4)
 
     doc.add_paragraph("\nSignature: __________________")
 
@@ -86,6 +84,7 @@ def generate_word_form(data):
     buffer.seek(0)
 
     return buffer
+
 
 # =====================================================
 # FILE UPLOAD
@@ -98,23 +97,18 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
 
-    # READ FILE
     if uploaded_file.name.endswith(".csv"):
         df = pd.read_csv(uploaded_file)
-
     elif uploaded_file.name.endswith(".xlsx"):
         df = pd.read_excel(uploaded_file, engine="openpyxl")
-
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # CLEAN TEXT
     df["SR Type"] = df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"] = df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
     df["SR Status"] = df["SR Status"].astype(str).str.strip()
 
-    # REMOVE EXCLUDED
     df = df[df["SR Type"].str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].str.lower() != "spa schemes"]
 
@@ -124,7 +118,6 @@ if uploaded_file:
     if not show_pmsy:
         df = df[df["SR Type"] != "PMSY RTS"]
 
-    # FILTER UNSURVEY OPEN
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -137,17 +130,10 @@ if uploaded_file:
 
     unsurvey_df = unsurvey_df[unsurvey_columns]
 
-    # ADD SERIAL NUMBER
-    unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df) + 1))
-
-    # ADD PRINT ICON
+    unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df)+1))
     unsurvey_df.insert(1, "Print", "🖨")
 
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
-
-    # =====================================================
-    # GRID CONFIGURATION
-    # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
 
@@ -156,11 +142,8 @@ if uploaded_file:
         sortable=True,
         resizable=True,
         flex=1,
-        minWidth=140
+        minWidth=130
     )
-
-    gb.configure_column("Sr. No.", maxWidth=90, flex=0)
-    gb.configure_column("Print", maxWidth=90, flex=0)
 
     gb.configure_selection("single")
 
@@ -177,7 +160,7 @@ if uploaded_file:
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # PRINT FORM (FIXED - NOT BLANK)
+    # PRINT FORM FIXED
     # =====================================================
 
     if selected is not None and len(selected) > 0:
@@ -187,84 +170,128 @@ if uploaded_file:
         else:
             row = selected[0]
 
+        table_rows = ""
+
+        for col in unsurvey_columns:
+            table_rows += f"""
+            <tr>
+            <td class="label">{col}</td>
+            <td class="value">{row[col]}</td>
+            </tr>
+            """
+
         print_html = f"""
         <html>
         <head>
         <style>
+
+        @media print {{
+            body {{
+                margin:0;
+            }}
+        }}
+
         body {{
             font-family: Arial;
-            padding: 20px;
+        }}
+
+        .container {{
+            width:100%;
+        }}
+
+        .label {{
+            font-weight:bold;
+            font-size:11px;
+            width:40%;
+        }}
+
+        .value {{
+            font-size:11px;
         }}
 
         table {{
-            width: 100%;
+            width:100%;
             border-collapse: collapse;
         }}
 
         td {{
-            border: 1px solid black;
-            padding: 6px;
+            border:1px solid black;
+            padding:4px;
         }}
 
         .sketch {{
-            height: 200px;
+            height:300px;
         }}
 
-        .print-btn {{
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: blue;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }}
-
-        @media print {{
-            .print-btn {{
-                display: none;
-            }}
-        }}
         </style>
         </head>
 
         <body>
 
-        <h2 style="text-align:center;">Electricity Connection Survey Form</h2>
+        <div class="container">
+
+        <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
 
         <table>
 
-        {"".join([f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>" for col in unsurvey_columns])}
-
-        <tr><td><b>Survey Category</b></td><td></td></tr>
-        <tr><td><b>Feeder Name</b></td><td></td></tr>
-        <tr><td><b>Date of Survey</b></td><td></td></tr>
-        <tr><td><b>Site Sketch</b></td><td class="sketch"></td></tr>
+        {table_rows}
 
         </table>
 
-        <br><br>
-        Signature: __________________
+        <br>
+
+        <table>
+
+        <tr>
+        <td class="label">Survey Category</td>
+        <td></td>
+        </tr>
+
+        <tr>
+        <td class="label">Feeder Name</td>
+        <td></td>
+        </tr>
+
+        <tr>
+        <td class="label">Date of Survey</td>
+        <td></td>
+        </tr>
+
+        </table>
 
         <br>
 
-        <button class="print-btn" onclick="window.print()">Print</button>
+        <table>
+
+        <tr>
+        <td class="label">Site Sketch</td>
+        </tr>
+
+        <tr>
+        <td class="sketch"></td>
+        </tr>
+
+        </table>
+
+        <br>
+
+        Signature: __________________
+
+        </div>
 
         </body>
         </html>
         """
 
-        components.html(print_html, height=700, scrolling=True)
+        components.html(print_html, height=800, scrolling=True)
 
-        # WORD DOWNLOAD
         word_file = generate_word_form(row)
 
         st.download_button(
-            "📄 Download Word Form",
+            "Download Word Form",
             word_file,
             file_name=f"Survey_Form_{row['SR Number']}.docx"
         )
 
 else:
-
     st.info("Upload file to begin")
