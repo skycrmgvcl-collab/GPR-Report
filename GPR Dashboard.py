@@ -4,6 +4,7 @@ from io import BytesIO
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+import base64
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
@@ -86,12 +87,101 @@ def generate_word_form(data):
 
 
 # =====================================================
+# PRINT WINDOW FUNCTION
+# =====================================================
+
+def open_print_window(row):
+
+    half = len(unsurvey_columns)//2
+
+    left = unsurvey_columns[:half]
+    right = unsurvey_columns[half:]
+
+    def make_rows(cols):
+        html=""
+        for col in cols:
+            html += f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>"
+        return html
+
+    html = f"""
+    <html>
+    <head>
+    <title>Print Survey Form</title>
+    <style>
+    body {{
+        font-family: Arial;
+        padding:20px;
+    }}
+    table {{
+        width:100%;
+        border-collapse:collapse;
+    }}
+    td {{
+        border:1px solid black;
+        padding:5px;
+        font-size:11px;
+    }}
+    .grid {{
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:10px;
+    }}
+    .sketch {{
+        height:350px;
+        border:1px solid black;
+    }}
+    </style>
+    </head>
+
+    <body onload="window.print()">
+
+    <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
+
+    <div class="grid">
+
+    <table>
+    {make_rows(left)}
+    </table>
+
+    <table>
+    {make_rows(right)}
+    </table>
+
+    </div>
+
+    <br>
+
+    <table>
+    <tr><td><b>Survey Category</b></td><td></td></tr>
+    <tr><td><b>Feeder Name</b></td><td></td></tr>
+    <tr><td><b>Date of Survey</b></td><td></td></tr>
+    </table>
+
+    <br>
+
+    <div class="sketch"></div>
+
+    <br>
+    Signature: __________________
+
+    </body>
+    </html>
+    """
+
+    b64 = base64.b64encode(html.encode()).decode()
+
+    href = f'<a href="data:text/html;base64,{b64}" target="_blank">🖨 Print Survey Form</a>'
+
+    return href
+
+
+# =====================================================
 # FILE UPLOAD
 # =====================================================
 
 uploaded_file = st.file_uploader(
     "Upload SR Excel/CSV File",
-    type=["xlsx", "xls", "csv"]
+    type=["xlsx","xls","csv"]
 )
 
 if uploaded_file:
@@ -103,52 +193,47 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    df["SR Type"] = df["SR Type"].astype(str).str.strip()
-    df["Name Of Scheme"] = df["Name Of Scheme"].astype(str).str.strip()
-    df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
-    df["SR Status"] = df["SR Status"].astype(str).str.strip()
+    df["SR Type"]=df["SR Type"].astype(str).str.strip()
+    df["Name Of Scheme"]=df["Name Of Scheme"].astype(str).str.strip()
+    df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
+    df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
-    df = df[df["SR Type"].str.lower() != "change of name"]
-    df = df[df["Name Of Scheme"].str.lower() != "spa schemes"]
+    df=df[df["SR Type"].str.lower()!="change of name"]
+    df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
     if not show_connection_shift:
-        df = df[df["SR Type"] != "Connection Shifting(Non Cons)"]
+        df=df[df["SR Type"]!="Connection Shifting(Non Cons)"]
 
     if not show_pmsy:
-        df = df[df["SR Type"] != "PMSY RTS"]
+        df=df[df["SR Type"]!="PMSY RTS"]
 
-    unsurvey_df = df[
+    unsurvey_df=df[
         (
             df["Survey Category"].isna()
-            | (df["Survey Category"] == "")
-            | (df["Survey Category"].str.lower() == "nan")
+            |(df["Survey Category"]=="")
+            |(df["Survey Category"].str.lower()=="nan")
         )
-        &
-        (df["SR Status"].str.upper() == "OPEN")
+        &(df["SR Status"].str.upper()=="OPEN")
     ]
 
-    unsurvey_df = unsurvey_df[unsurvey_columns]
+    unsurvey_df=unsurvey_df[unsurvey_columns]
 
-    unsurvey_df.insert(0, "Sr. No.", range(1, len(unsurvey_df)+1))
-    unsurvey_df.insert(1, "Print", "🖨")
+    unsurvey_df.insert(0,"Sr. No.",range(1,len(unsurvey_df)+1))
+    unsurvey_df.insert(1,"Print","🖨")
 
-    st.metric("Total Unsurvey OPEN", len(unsurvey_df))
-
-    gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
+    gb=GridOptionsBuilder.from_dataframe(unsurvey_df)
 
     gb.configure_default_column(
         filter=True,
         sortable=True,
-        resizable=True,
-        flex=1,
-        minWidth=130
+        flex=1
     )
 
     gb.configure_selection("single")
 
-    gridOptions = gb.build()
+    gridOptions=gb.build()
 
-    grid_response = AgGrid(
+    grid_response=AgGrid(
         unsurvey_df,
         gridOptions=gridOptions,
         height=500,
@@ -156,120 +241,25 @@ if uploaded_file:
         update_mode=GridUpdateMode.SELECTION_CHANGED
     )
 
-    selected = grid_response["selected_rows"]
+    selected=grid_response["selected_rows"]
 
-    # =====================================================
-    # PRINT FORM (SIDE-BY-SIDE LAYOUT)
-    # =====================================================
+    if selected is not None and len(selected)>0:
 
-    if selected is not None and len(selected) > 0:
-
-        if isinstance(selected, pd.DataFrame):
-            row = selected.iloc[0].to_dict()
+        if isinstance(selected,pd.DataFrame):
+            row=selected.iloc[0].to_dict()
         else:
-            row = selected[0]
+            row=selected[0]
 
-        half = len(unsurvey_columns)//2
+        st.markdown(open_print_window(row), unsafe_allow_html=True)
 
-        left_cols = unsurvey_columns[:half]
-        right_cols = unsurvey_columns[half:]
+        word_file=generate_word_form(row)
 
-        def make_rows(cols):
-            rows = ""
-            for col in cols:
-                rows += f"<tr><td class='label'>{col}</td><td class='value'>{row[col]}</td></tr>"
-            return rows
-
-        html = f"""
-        <style>
-
-        @media print {{
-            header, footer, .stToolbar {{
-                display:none !important;
-            }}
-        }}
-
-        .print-container {{
-            background:white;
-            padding:20px;
-            font-family:Arial;
-        }}
-
-        .grid {{
-            display:grid;
-            grid-template-columns: 1fr 1fr;
-            gap:10px;
-        }}
-
-        table {{
-            width:100%;
-            border-collapse: collapse;
-        }}
-
-        td {{
-            border:1px solid black;
-            padding:4px;
-            font-size:11px;
-        }}
-
-        .label {{
-            font-weight:bold;
-            width:40%;
-        }}
-
-        .sketch {{
-            height:350px;
-            border:1px solid black;
-        }}
-
-        </style>
-
-        <div class="print-container">
-
-        <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
-
-        <div class="grid">
-
-        <table>{make_rows(left_cols)}</table>
-
-        <table>{make_rows(right_cols)}</table>
-
-        </div>
-
-        <br>
-
-        <table>
-        <tr><td class="label">Survey Category</td><td></td></tr>
-        <tr><td class="label">Feeder Name</td><td></td></tr>
-        <tr><td class="label">Date of Survey</td><td></td></tr>
-        </table>
-
-        <br>
-
-        <div class="sketch"></div>
-
-        <br>
-
-        Signature: __________________
-
-        </div>
-        """
-
-        st.markdown(html, unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.button("🖨 Print (Press Ctrl+P after clicking)")
-
-        with col2:
-            word_file = generate_word_form(row)
-
-            st.download_button(
-                "Download Word Form",
-                word_file,
-                file_name=f"Survey_Form_{row['SR Number']}.docx"
-            )
+        st.download_button(
+            "Download Word Form",
+            word_file,
+            file_name=f"Survey_Form_{row['SR Number']}.docx"
+        )
 
 else:
+
     st.info("Upload file to begin")
