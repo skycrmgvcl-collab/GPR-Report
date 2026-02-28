@@ -3,7 +3,7 @@ import pandas as pd
 from io import BytesIO
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from st_aggrid import AgGrid, GridOptionsBuilder
 import base64
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
@@ -14,15 +14,11 @@ st.title("⚡ SR Stage Monitoring Dashboard")
 # SIDEBAR FILTERS
 # =====================================================
 
-st.sidebar.header("SR Type Filter")
+st.sidebar.header("Include SR Types")
 
-show_connection_shift = st.sidebar.checkbox(
-    "Connection Shifting (Non Cons)", value=False
-)
-
-show_pmsy = st.sidebar.checkbox(
-    "PMSY RTS", value=False
-)
+show_shift = st.sidebar.checkbox("Connection Shifting (Non Cons)", value=False)
+show_pmsy = st.sidebar.checkbox("PMSY RTS", value=False)
+show_rooftop = st.sidebar.checkbox("LT Rooftop", value=False)
 
 # =====================================================
 # REQUIRED COLUMNS
@@ -52,10 +48,10 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD GENERATOR
+# WORD FORM
 # =====================================================
 
-def generate_word_form(data):
+def generate_word_form(row):
 
     doc = Document()
 
@@ -65,10 +61,10 @@ def generate_word_form(data):
     table = doc.add_table(rows=0, cols=2)
     table.style = "Table Grid"
 
-    for key, value in data.items():
-        row = table.add_row().cells
-        row[0].text = key
-        row[1].text = str(value)
+    for col in unsurvey_columns:
+        r = table.add_row().cells
+        r[0].text = col
+        r[1].text = str(row[col])
 
     doc.add_paragraph("\nSurvey Category: __________________")
     doc.add_paragraph("Feeder Name: __________________")
@@ -85,143 +81,157 @@ def generate_word_form(data):
 
     return buffer
 
-
 # =====================================================
-# PRINT WINDOW FUNCTION
+# PRINT HTML GENERATOR
 # =====================================================
 
-def open_print_window(row):
+def create_print_link(row):
 
     half = len(unsurvey_columns)//2
 
     left = unsurvey_columns[:half]
     right = unsurvey_columns[half:]
 
-    def make_rows(cols):
+    def rows(cols):
         html=""
-        for col in cols:
-            html += f"<tr><td><b>{col}</b></td><td>{row[col]}</td></tr>"
+        for c in cols:
+            html+=f"<tr><td class='l'>{c}</td><td class='v'>{row[c]}</td></tr>"
         return html
 
-    html = f"""
-    <html>
-    <head>
-    <title>Print Survey Form</title>
-    <style>
-    body {{
-        font-family: Arial;
-        padding:20px;
-    }}
-    table {{
-        width:100%;
-        border-collapse:collapse;
-    }}
-    td {{
-        border:1px solid black;
-        padding:5px;
-        font-size:11px;
-    }}
-    .grid {{
-        display:grid;
-        grid-template-columns: 1fr 1fr;
-        gap:10px;
-    }}
-    .sketch {{
-        height:350px;
-        border:1px solid black;
-    }}
-    </style>
-    </head>
+    html=f"""
+<html>
+<head>
+<style>
 
-    <body onload="window.print()">
+body {{
+font-family: Arial;
+padding:20px;
+}}
 
-    <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
+.grid {{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}}
 
-    <div class="grid">
+table {{
+width:100%;
+border-collapse:collapse;
+}}
 
-    <table>
-    {make_rows(left)}
-    </table>
+td {{
+border:1px solid black;
+padding:4px;
+font-size:11px;
+}}
 
-    <table>
-    {make_rows(right)}
-    </table>
+.l {{
+font-weight:bold;
+width:40%;
+}}
 
-    </div>
+.sketch {{
+height:350px;
+border:1px solid black;
+margin-top:10px;
+}}
 
-    <br>
+</style>
+</head>
 
-    <table>
-    <tr><td><b>Survey Category</b></td><td></td></tr>
-    <tr><td><b>Feeder Name</b></td><td></td></tr>
-    <tr><td><b>Date of Survey</b></td><td></td></tr>
-    </table>
+<body onload="window.print()">
 
-    <br>
+<h3 style="text-align:center;">Electricity Connection Survey Form</h3>
 
-    <div class="sketch"></div>
+<div class="grid">
 
-    <br>
-    Signature: __________________
+<table>
+{rows(left)}
+</table>
 
-    </body>
-    </html>
-    """
+<table>
+{rows(right)}
+</table>
 
-    b64 = base64.b64encode(html.encode()).decode()
+</div>
 
-    href = f'<a href="data:text/html;base64,{b64}" target="_blank">🖨 Print Survey Form</a>'
+<br>
 
-    return href
+<table>
+<tr><td class="l">Survey Category</td><td></td></tr>
+<tr><td class="l">Feeder Name</td><td></td></tr>
+<tr><td class="l">Date of Survey</td><td></td></tr>
+</table>
 
+<div class="sketch"></div>
+
+<br>
+Signature: __________________
+
+</body>
+</html>
+"""
+
+    b64=base64.b64encode(html.encode()).decode()
+
+    return f'<a href="data:text/html;base64,{b64}" target="_blank">🖨</a>'
 
 # =====================================================
 # FILE UPLOAD
 # =====================================================
 
-uploaded_file = st.file_uploader(
-    "Upload SR Excel/CSV File",
-    type=["xlsx","xls","csv"]
-)
+file=st.file_uploader("Upload Excel/CSV",type=["xlsx","xls","csv"])
 
-if uploaded_file:
+if file:
 
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-    elif uploaded_file.name.endswith(".xlsx"):
-        df = pd.read_excel(uploaded_file, engine="openpyxl")
+    if file.name.endswith(".csv"):
+        df=pd.read_csv(file)
+    elif file.name.endswith(".xlsx"):
+        df=pd.read_excel(file,engine="openpyxl")
     else:
-        df = pd.read_excel(uploaded_file, engine="xlrd")
+        df=pd.read_excel(file,engine="xlrd")
 
     df["SR Type"]=df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"]=df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
     df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
+    # always remove
     df=df[df["SR Type"].str.lower()!="change of name"]
     df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
-    if not show_connection_shift:
+    # sidebar filters
+    if not show_shift:
         df=df[df["SR Type"]!="Connection Shifting(Non Cons)"]
 
     if not show_pmsy:
         df=df[df["SR Type"]!="PMSY RTS"]
 
-    unsurvey_df=df[
+    if not show_rooftop:
+        df=df[df["SR Type"]!="LT Rooftop"]
+
+    df=df[
         (
-            df["Survey Category"].isna()
-            |(df["Survey Category"]=="")
-            |(df["Survey Category"].str.lower()=="nan")
+        df["Survey Category"].isna()
+        |(df["Survey Category"]=="")
+        |(df["Survey Category"].str.lower()=="nan")
         )
-        &(df["SR Status"].str.upper()=="OPEN")
+        &
+        (df["SR Status"].str.upper()=="OPEN")
     ]
 
-    unsurvey_df=unsurvey_df[unsurvey_columns]
+    df=df[unsurvey_columns]
 
-    unsurvey_df.insert(0,"Sr. No.",range(1,len(unsurvey_df)+1))
-    unsurvey_df.insert(1,"Print","🖨")
+    df.insert(0,"Sr. No.",range(1,len(df)+1))
 
-    gb=GridOptionsBuilder.from_dataframe(unsurvey_df)
+    # print icon column
+    df.insert(1,"Print","")
+
+    df["Print"]=df.apply(lambda x:create_print_link(x),axis=1)
+
+    st.metric("Total Unsurvey OPEN",len(df))
+
+    gb=GridOptionsBuilder.from_dataframe(df)
 
     gb.configure_default_column(
         filter=True,
@@ -229,37 +239,19 @@ if uploaded_file:
         flex=1
     )
 
-    gb.configure_selection("single")
+    gb.configure_column("Print",width=70)
 
     gridOptions=gb.build()
 
-    grid_response=AgGrid(
-        unsurvey_df,
+    AgGrid(
+        df,
         gridOptions=gridOptions,
-        height=500,
+        allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
-        update_mode=GridUpdateMode.SELECTION_CHANGED
+        height=500
     )
 
-    selected=grid_response["selected_rows"]
-
-    if selected is not None and len(selected)>0:
-
-        if isinstance(selected,pd.DataFrame):
-            row=selected.iloc[0].to_dict()
-        else:
-            row=selected[0]
-
-        st.markdown(open_print_window(row), unsafe_allow_html=True)
-
-        word_file=generate_word_form(row)
-
-        st.download_button(
-            "Download Word Form",
-            word_file,
-            file_name=f"Survey_Form_{row['SR Number']}.docx"
-        )
+    st.write("Click 🖨 icon in row to print")
 
 else:
-
     st.info("Upload file to begin")
