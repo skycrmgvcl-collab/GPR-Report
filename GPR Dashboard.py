@@ -3,12 +3,22 @@ import pandas as pd
 from io import BytesIO
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
 st.title("⚡ SR Stage Monitoring Dashboard")
+
+# =====================================================
+# SIDEBAR FILTER
+# =====================================================
+
+st.sidebar.header("Filter Options")
+
+include_special = st.sidebar.checkbox(
+    "Include Connection Shifting(Non Cons) & PMSY RTS",
+    value=False
+)
 
 # =====================================================
 # REQUIRED COLUMNS
@@ -38,10 +48,10 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD FORM FUNCTION
+# WORD GENERATOR
 # =====================================================
 
-def generate_word_form(row):
+def generate_word_form(data):
 
     doc = Document()
 
@@ -51,15 +61,11 @@ def generate_word_form(row):
     table = doc.add_table(rows=0, cols=2)
     table.style = "Table Grid"
 
-    for col in unsurvey_columns:
+    for key, value in data.items():
+        row = table.add_row().cells
+        row[0].text = str(key)
+        row[1].text = str(value)
 
-        tr = table.add_row().cells
-        tr[0].text = col
-        tr[1].text = str(row[col])
-
-    doc.add_paragraph("")
-    doc.add_paragraph("Survey Category: __________________")
-    doc.add_paragraph("Survey Remarks: __________________")
     doc.add_paragraph("")
     doc.add_paragraph("Signature: __________________")
 
@@ -69,14 +75,13 @@ def generate_word_form(row):
 
     return buffer
 
-
 # =====================================================
 # FILE UPLOAD
 # =====================================================
 
 uploaded_file = st.file_uploader(
     "Upload SR Excel/CSV File",
-    type=["xls", "xlsx", "csv"]
+    type=["xlsx", "xls", "csv"]
 )
 
 if uploaded_file:
@@ -91,15 +96,21 @@ if uploaded_file:
     else:
         df = pd.read_excel(uploaded_file, engine="xlrd")
 
-    # REMOVE EXCLUDED DATA
-
+    # REMOVE EXCLUDED TYPES
     df = df[df["SR Type"].astype(str).str.lower() != "change of name"]
     df = df[df["Name Of Scheme"].astype(str).str.lower() != "spa schemes"]
 
-    df["Survey Category"] = df["Survey Category"].astype(str).str.strip()
+    if not include_special:
+        df = df[
+            ~df["SR Type"].isin([
+                "Connection Shifting(Non Cons)",
+                "PMSY RTS"
+            ])
+        ]
+
+    df["Survey Category"] = df["Survey Category"].astype(str)
 
     # FILTER UNSURVEY + OPEN
-
     unsurvey_df = df[
         (
             df["Survey Category"].isna()
@@ -114,47 +125,89 @@ if uploaded_file:
 
     st.metric("Total Unsurvey OPEN", len(unsurvey_df))
 
-    # ADD SURVEY COLUMN
-
-    unsurvey_df["Survey Form"] = "📄"
-
     # =====================================================
-    # DISPLAY GRID
+    # AGGRID TABLE WITH HEADER FILTERS
     # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(unsurvey_df)
+
+    gb.configure_default_column(
+        filter=True,
+        sortable=True
+    )
 
     gb.configure_selection("single")
 
     gridOptions = gb.build()
 
-    grid_response = AgGrid(
+    grid = AgGrid(
         unsurvey_df,
         gridOptions=gridOptions,
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
         height=500,
-        allow_unsafe_jscode=True
+        update_mode=GridUpdateMode.SELECTION_CHANGED
     )
 
-    selected = grid_response["selected_rows"]
+    selected = grid["selected_rows"]
 
     # =====================================================
-    # DOWNLOAD WORD FORM WHEN ROW SELECTED
+    # EDITABLE SURVEY FORM
     # =====================================================
 
-    if selected:
+    if selected is not None and len(selected) > 0:
 
-        selected_row = pd.Series(selected[0])
+        selected_row = selected[0]
 
-        word_file = generate_word_form(selected_row)
+        st.divider()
+        st.subheader(f"📋 Survey Form – SR Number: {selected_row['SR Number']}")
 
-        st.download_button(
-            label=f"📄 Download Survey Form for SR {selected_row['SR Number']}",
-            data=word_file,
-            file_name=f"Survey_Form_{selected_row['SR Number']}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+        if "form_data" not in st.session_state:
+            st.session_state.form_data = selected_row.copy()
+
+        with st.form("survey_form"):
+
+            form_data = {}
+
+            for col in unsurvey_columns:
+
+                form_data[col] = st.text_input(
+                    col,
+                    value=str(st.session_state.form_data.get(col, "")),
+                    key=f"field_{col}"
+                )
+
+            form_data["Survey Category"] = st.selectbox(
+                "Survey Category",
+                ["", "A", "B", "C", "D"]
+            )
+
+            form_data["Remarks"] = st.text_area("Remarks")
+
+            col1, col2 = st.columns(2)
+
+            generate_btn = col1.form_submit_button("📄 Generate Word")
+            print_btn = col2.form_submit_button("🖨 Print")
+
+        st.session_state.form_data = form_data
+
+        if generate_btn:
+
+            word_file = generate_word_form(form_data)
+
+            st.download_button(
+                "Download Survey Form",
+                word_file,
+                file_name=f"Survey_Form_{form_data['SR Number']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
+        if print_btn:
+
+            st.write("### Printable Survey Form")
+
+            for key, value in form_data.items():
+                st.write(f"**{key}:** {value}")
+
+            st.info("Press Ctrl+P to Print")
 
 else:
-
-    st.info("Upload Excel file")
+    st.info("Upload file to begin.")
