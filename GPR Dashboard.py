@@ -4,7 +4,6 @@ from io import BytesIO
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 
@@ -52,7 +51,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD FORM GENERATOR (ONE PAGE)
+# WORD GENERATOR
 # =====================================================
 
 def generate_word_form(data):
@@ -160,7 +159,7 @@ if uploaded_file:
     selected = grid_response["selected_rows"]
 
     # =====================================================
-    # PRINT FORM FIXED
+    # PRINT FORM (SIDE-BY-SIDE LAYOUT)
     # =====================================================
 
     if selected is not None and len(selected) > 0:
@@ -170,43 +169,36 @@ if uploaded_file:
         else:
             row = selected[0]
 
-        table_rows = ""
+        half = len(unsurvey_columns)//2
 
-        for col in unsurvey_columns:
-            table_rows += f"""
-            <tr>
-            <td class="label">{col}</td>
-            <td class="value">{row[col]}</td>
-            </tr>
-            """
+        left_cols = unsurvey_columns[:half]
+        right_cols = unsurvey_columns[half:]
 
-        print_html = f"""
-        <html>
-        <head>
+        def make_rows(cols):
+            rows = ""
+            for col in cols:
+                rows += f"<tr><td class='label'>{col}</td><td class='value'>{row[col]}</td></tr>"
+            return rows
+
+        html = f"""
         <style>
 
         @media print {{
-            body {{
-                margin:0;
+            header, footer, .stToolbar {{
+                display:none !important;
             }}
         }}
 
-        body {{
-            font-family: Arial;
+        .print-container {{
+            background:white;
+            padding:20px;
+            font-family:Arial;
         }}
 
-        .container {{
-            width:100%;
-        }}
-
-        .label {{
-            font-weight:bold;
-            font-size:11px;
-            width:40%;
-        }}
-
-        .value {{
-            font-size:11px;
+        .grid {{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:10px;
         }}
 
         table {{
@@ -217,81 +209,67 @@ if uploaded_file:
         td {{
             border:1px solid black;
             padding:4px;
+            font-size:11px;
+        }}
+
+        .label {{
+            font-weight:bold;
+            width:40%;
         }}
 
         .sketch {{
-            height:300px;
+            height:350px;
+            border:1px solid black;
         }}
 
         </style>
-        </head>
 
-        <body>
-
-        <div class="container">
+        <div class="print-container">
 
         <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
 
-        <table>
+        <div class="grid">
 
-        {table_rows}
+        <table>{make_rows(left_cols)}</table>
 
-        </table>
+        <table>{make_rows(right_cols)}</table>
 
-        <br>
-
-        <table>
-
-        <tr>
-        <td class="label">Survey Category</td>
-        <td></td>
-        </tr>
-
-        <tr>
-        <td class="label">Feeder Name</td>
-        <td></td>
-        </tr>
-
-        <tr>
-        <td class="label">Date of Survey</td>
-        <td></td>
-        </tr>
-
-        </table>
+        </div>
 
         <br>
 
         <table>
-
-        <tr>
-        <td class="label">Site Sketch</td>
-        </tr>
-
-        <tr>
-        <td class="sketch"></td>
-        </tr>
-
+        <tr><td class="label">Survey Category</td><td></td></tr>
+        <tr><td class="label">Feeder Name</td><td></td></tr>
+        <tr><td class="label">Date of Survey</td><td></td></tr>
         </table>
+
+        <br>
+
+        <div class="sketch"></div>
 
         <br>
 
         Signature: __________________
 
         </div>
-
-        </body>
-        </html>
         """
 
-        components.html(print_html, height=800, scrolling=True)
+        st.markdown(html, unsafe_allow_html=True)
 
-        word_file = generate_word_form(row)
+        col1, col2 = st.columns(2)
 
-        st.download_button(
-            "Download Word Form",
-            word_file,
-            file_name=f"Survey_Form_{row['SR Number']}.docx"
-        )
+        with col1:
+            st.button("🖨 Print (Press Ctrl+P after clicking)")
+
+        with col2:
+            word_file = generate_word_form(row)
+
+            st.download_button(
+                "Download Word Form",
+                word_file,
+                file_name=f"Survey_Form_{row['SR Number']}.docx"
+            )
 
 else:
     st.info("Upload file to begin")
