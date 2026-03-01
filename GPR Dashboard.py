@@ -14,11 +14,16 @@ st.title("⚡ SR Stage Monitoring Dashboard")
 # SIDEBAR FILTERS
 # =====================================================
 
-st.sidebar.header("Include SR Types")
+st.sidebar.header("Filters")
 
-show_shift = st.sidebar.checkbox("Connection Shifting (Non Cons)", value=False)
-show_pmsy = st.sidebar.checkbox("PMSY RTS", value=False)
-show_rooftop = st.sidebar.checkbox("LT Rooftop", value=False)
+# SR Type filters (exclusive selection)
+show_shift = st.sidebar.checkbox("Connection Shifting (Non Cons)")
+show_pmsy = st.sidebar.checkbox("PMSY RTS")
+show_rooftop = st.sidebar.checkbox("LT Rooftop")
+
+# Scheme filter placeholder (will populate after upload)
+scheme_filter = None
+
 
 # =====================================================
 # REQUIRED COLUMNS
@@ -48,7 +53,7 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# WORD FORM GENERATOR
+# WORD FORM GENERATOR (UNCHANGED)
 # =====================================================
 
 def generate_word_form(row):
@@ -87,7 +92,7 @@ def generate_word_form(row):
 
 
 # =====================================================
-# PRINT FORM HTML
+# PRINT HTML GENERATOR (UNCHANGED)
 # =====================================================
 
 def create_print_html(row):
@@ -107,40 +112,12 @@ def create_print_html(row):
 <html>
 <head>
 <style>
-
-body {{
-font-family:Arial;
-padding:20px;
-}}
-
-.grid {{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:10px;
-}}
-
-table {{
-width:100%;
-border-collapse:collapse;
-}}
-
-td {{
-border:1px solid black;
-padding:4px;
-font-size:11px;
-}}
-
-.l {{
-font-weight:bold;
-width:40%;
-}}
-
-.sketch {{
-height:350px;
-border:1px solid black;
-margin-top:10px;
-}}
-
+body {{font-family:Arial;padding:20px;}}
+.grid {{display:grid;grid-template-columns:1fr 1fr;gap:10px;}}
+table {{width:100%;border-collapse:collapse;}}
+td {{border:1px solid black;padding:4px;font-size:11px;}}
+.l {{font-weight:bold;width:40%;}}
+.sketch {{height:350px;border:1px solid black;margin-top:10px;}}
 </style>
 </head>
 
@@ -149,15 +126,8 @@ margin-top:10px;
 <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
 
 <div class="grid">
-
-<table>
-{make_rows(left)}
-</table>
-
-<table>
-{make_rows(right)}
-</table>
-
+<table>{make_rows(left)}</table>
+<table>{make_rows(right)}</table>
 </div>
 
 <br>
@@ -201,17 +171,60 @@ if file:
     df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
     df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
+    # =====================================================
+    # NEW: SCHEME FILTER
+    # =====================================================
+
+    scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
+
+    scheme_filter = st.sidebar.selectbox(
+        "Name Of Scheme",
+        ["All"] + list(scheme_list)
+    )
+
+    # =====================================================
+    # REMOVE ALWAYS EXCLUDED
+    # =====================================================
+
     df=df[df["SR Type"].str.lower()!="change of name"]
     df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
-    if not show_shift:
-        df=df[df["SR Type"]!="Connection Shifting(Non Cons)"]
+    # =====================================================
+    # SR TYPE EXCLUSIVE FILTER
+    # =====================================================
 
-    if not show_pmsy:
-        df=df[df["SR Type"]!="PMSY RTS"]
+    selected_types = []
 
-    if not show_rooftop:
-        df=df[df["SR Type"]!="LT Rooftop"]
+    if show_shift:
+        selected_types.append("Connection Shifting(Non Cons)")
+
+    if show_pmsy:
+        selected_types.append("PMSY RTS")
+
+    if show_rooftop:
+        selected_types.append("LT Rooftop")
+
+    if len(selected_types) > 0:
+        df = df[df["SR Type"].isin(selected_types)]
+    else:
+        df = df[
+            ~df["SR Type"].isin([
+                "Connection Shifting(Non Cons)",
+                "PMSY RTS",
+                "LT Rooftop"
+            ])
+        ]
+
+    # =====================================================
+    # SCHEME FILTER APPLY
+    # =====================================================
+
+    if scheme_filter != "All":
+        df = df[df["Name Of Scheme"] == scheme_filter]
+
+    # =====================================================
+    # UNSURVEY OPEN FILTER
+    # =====================================================
 
     df=df[
         (
@@ -231,7 +244,7 @@ if file:
     df.insert(1,"Print","")
 
     # =====================================================
-    # ICON CELL RENDERER
+    # ICON RENDERER (UNCHANGED)
     # =====================================================
 
     cell_renderer = JsCode("""
@@ -253,10 +266,6 @@ if file:
         }
     }
     """)
-
-    # =====================================================
-    # PERFECT FIT COLUMN SETTINGS
-    # =====================================================
 
     gb = GridOptionsBuilder.from_dataframe(df)
 
@@ -293,8 +302,6 @@ if file:
         height=500,
         theme="streamlit"
     )
-
-    st.write("Click 🖨 icon to print form")
 
 else:
 
