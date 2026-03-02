@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 import base64
-from datetime import datetime
 
 st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
 
@@ -84,7 +83,7 @@ Signature: __________________
     return base64.b64encode(html.encode()).decode()
 
 # =====================================================
-# AGGRID FUNCTIONS
+# AGGRID DISPLAY FUNCTION (NO COLOR CODING)
 # =====================================================
 
 def display_grid(df, print_enable=False):
@@ -110,35 +109,27 @@ def display_grid(df, print_enable=False):
     }
     """)
 
-    # Aging color style
-    aging_style = JsCode("""
-    function(params) {
-        if (params.value > 30) {
-            return {'backgroundColor': '#ffcccc'};
-        } else if (params.value > 7) {
-            return {'backgroundColor': '#fff3cd'};
-        } else {
-            return {'backgroundColor': '#d4edda'};
-        }
-    }
-    """)
-
     gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
+    gb.configure_default_column(
+        filter=True,
+        sortable=True,
+        resizable=True,
+        flex=1,
+        minWidth=130
+    )
 
     if print_enable:
         gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0, pinned="left")
         gb.configure_column("print_data", hide=True)
 
-    if "Aging Days" in df.columns:
-        gb.configure_column("Aging Days", cellStyle=aging_style)
-
-    AgGrid(df,
-           gridOptions=gb.build(),
-           allow_unsafe_jscode=True,
-           fit_columns_on_grid_load=True,
-           height=500,
-           theme="streamlit")
+    AgGrid(
+        df,
+        gridOptions=gb.build(),
+        allow_unsafe_jscode=True,
+        fit_columns_on_grid_load=True,
+        height=500,
+        theme="streamlit"
+    )
 
 # =====================================================
 # FILE UPLOAD
@@ -155,7 +146,7 @@ if file:
     else:
         df = pd.read_excel(file, engine="xlrd")
 
-    # Clean
+    # Clean columns
     df["SR Type"]=df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"]=df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
@@ -170,7 +161,7 @@ if file:
     scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
     scheme_filter = st.sidebar.selectbox("Name Of Scheme", ["All"] + list(scheme_list))
 
-    # Remove excluded
+    # Remove excluded types
     df=df[df["SR Type"].str.lower()!="change of name"]
     df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
@@ -219,7 +210,7 @@ if file:
     df3["Aging Days"]=(today - df3["Date Of Est Appr Launch"]).dt.days
 
     # =====================================================
-    # TOP SUMMARY
+    # SUMMARY METRICS
     # =====================================================
 
     col1,col2,col3 = st.columns(3)
