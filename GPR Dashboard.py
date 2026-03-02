@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 import base64
+from datetime import datetime
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
 st.title("⚡ SR Stage Monitoring Dashboard")
@@ -20,7 +18,7 @@ show_pmsy = st.sidebar.checkbox("PMSY RTS")
 show_rooftop = st.sidebar.checkbox("LT Rooftop")
 
 # =====================================================
-# BASE COLUMNS (TAB 1)
+# BASE COLUMNS
 # =====================================================
 
 unsurvey_columns = [
@@ -30,10 +28,6 @@ unsurvey_columns = [
     "Demand Load","Load Uom","Tariff","RC Date","RC MR NO",
     "RC Charge","SR Status","Rev Land Syrvey No"
 ]
-
-# =====================================================
-# EXTRA COLUMNS (TAB 2 & TAB 3 ONLY)
-# =====================================================
 
 extra_columns = [
     "Survey Category",
@@ -46,7 +40,7 @@ extra_columns = [
 ]
 
 # =====================================================
-# PRINT FUNCTION (TAB 1 ONLY)
+# PRINT HTML (TAB 1 ONLY)
 # =====================================================
 
 def create_print_html(row):
@@ -58,7 +52,7 @@ def create_print_html(row):
     def make_rows(cols):
         html=""
         for c in cols:
-            html += f"<tr><td class='l'>{c}</td><td class='v'>{row[c]}</td></tr>"
+            html += f"<tr><td><b>{c}</b></td><td>{row[c]}</td></tr>"
         return html
 
     html=f"""
@@ -69,7 +63,6 @@ body {{font-family:Arial;padding:20px;}}
 .grid {{display:grid;grid-template-columns:1fr 1fr;gap:10px;}}
 table {{width:100%;border-collapse:collapse;}}
 td {{border:1px solid black;padding:4px;font-size:11px;}}
-.l {{font-weight:bold;width:40%;}}
 .sketch {{height:350px;border:1px solid black;margin-top:10px;}}
 </style>
 </head>
@@ -80,11 +73,6 @@ td {{border:1px solid black;padding:4px;font-size:11px;}}
 <table>{make_rows(right)}</table>
 </div>
 <br>
-<table>
-<tr><td class="l">Survey Category</td><td></td></tr>
-<tr><td class="l">Feeder Name</td><td></td></tr>
-<tr><td class="l">Date of Survey</td><td></td></tr>
-</table>
 <div class="sketch"></div>
 <br>
 Signature: __________________
@@ -94,7 +82,7 @@ Signature: __________________
     return base64.b64encode(html.encode()).decode()
 
 # =====================================================
-# GRID FUNCTIONS
+# GRID DISPLAY FUNCTIONS
 # =====================================================
 
 def display_grid_with_print(df):
@@ -157,14 +145,15 @@ if file:
     else:
         df = pd.read_excel(file, engine="xlrd")
 
-    # CLEAN
+    # Clean
     df["SR Type"]=df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"]=df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
     df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
-    # Date conversions (safe)
-    for col in ["Date Of Est Appr Launch","Date Of FQ Issued"]:
+    # Date conversion
+    date_cols = ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]
+    for col in date_cols:
         if col in df.columns:
             df[col]=pd.to_datetime(df[col],errors="coerce")
 
@@ -189,61 +178,68 @@ if file:
     if scheme_filter!="All":
         df=df[df["Name Of Scheme"]==scheme_filter]
 
+    today = pd.Timestamp.today()
+
+    # =====================================================
+    # TAB DATA PREP
+    # =====================================================
+
+    df1=df[
+        (
+            df["Survey Category"].isna()
+            |(df["Survey Category"]=="")
+            |(df["Survey Category"].str.lower()=="nan")
+        )
+        &(df["SR Status"].str.upper()=="OPEN")
+    ].copy()
+
+    df1["Aging Days"]=(today - df1["RC Date"]).dt.days
+
+    df2=df[
+        (df["Survey Category"].isin(["A","B","C","D"]))
+        &(df["Date Of Est Appr Launch"].isna())
+        &(df["SR Status"].str.upper()=="OPEN")
+    ].copy()
+
+    df2["Aging Days"]=(today - df2["Date Of Survey"]).dt.days
+
+    df3=df[
+        (df["Survey Category"].isin(["A","B","C","D"]))
+        &(df["Date Of Est Appr Launch"].notna())
+        &(df["Date Of FQ Issued"].isna())
+        &(df["SR Status"].str.upper()=="OPEN")
+    ].copy()
+
+    df3["Aging Days"]=(today - df3["Date Of Est Appr Launch"]).dt.days
+
+    # =====================================================
+    # STAGE SUMMARY CARDS
+    # =====================================================
+
+    col1,col2,col3=st.columns(3)
+
+    col1.metric("📝 Survey Pending",len(df1))
+    col2.metric("📐 Estimate Pending",len(df2))
+    col3.metric("💰 FQ Issue Pending",len(df3))
+
     # =====================================================
     # TABS
     # =====================================================
 
-    tab1, tab2, tab3 = st.tabs([
-        "Unsurvey Applications",
-        "Estimate Pending",
-        "FQ Issue Pending"
-    ])
-
-    # ================= TAB 1 =================
+    tab1,tab2,tab3=st.tabs(["Unsurvey Applications","Estimate Pending","FQ Issue Pending"])
 
     with tab1:
-
-        df1=df[
-            (
-                df["Survey Category"].isna()
-                |(df["Survey Category"]=="")
-                |(df["Survey Category"].str.lower()=="nan")
-            )
-            &(df["SR Status"].str.upper()=="OPEN")
-        ]
-
-        df1=df1[unsurvey_columns]
+        df1=df1[unsurvey_columns + ["Aging Days"]]
         df1.insert(0,"Sr. No.",range(1,len(df1)+1))
         display_grid_with_print(df1)
 
-    # ================= TAB 2 =================
-
     with tab2:
-
-        df2=df[
-            (df["Survey Category"].notna())
-            &(df["Survey Category"]!="")
-            &(df["Date Of Est Appr Launch"].isna())
-            &(df["SR Status"].str.upper()=="OPEN")
-        ]
-
-        df2=df2[unsurvey_columns + extra_columns]
+        df2=df2[unsurvey_columns + extra_columns + ["Aging Days"]]
         df2.insert(0,"Sr. No.",range(1,len(df2)+1))
         display_grid_simple(df2)
 
-    # ================= TAB 3 =================
-
     with tab3:
-
-        df3=df[
-            (df["Survey Category"].notna())
-            &(df["Survey Category"]!="")
-            &(df["Date Of Est Appr Launch"].notna())
-            &(df["Date Of FQ Issued"].isna())
-            &(df["SR Status"].str.upper()=="OPEN")
-        ]
-
-        df3=df3[unsurvey_columns + extra_columns]
+        df3=df3[unsurvey_columns + extra_columns + ["Aging Days"]]
         df3.insert(0,"Sr. No.",range(1,len(df3)+1))
         display_grid_simple(df3)
 
