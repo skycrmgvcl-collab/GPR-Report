@@ -4,8 +4,10 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 import base64
 from datetime import datetime
 
-st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
-st.title("⚡ SR Stage Monitoring Dashboard")
+st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
+
+st.markdown("## ⚡ Subdivision SR Monitoring Dashboard")
+st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
 # =====================================================
 # SIDEBAR FILTERS
@@ -21,7 +23,7 @@ show_rooftop = st.sidebar.checkbox("LT Rooftop")
 # BASE COLUMNS
 # =====================================================
 
-unsurvey_columns = [
+base_columns = [
     "Name Of Subdivision","SR Number","SR Type","Name Of Applicant",
     "Address1","Address2","District","Taluka","Village Or City",
     "Consumer Category","Sub Category","Name Of Scheme",
@@ -40,14 +42,14 @@ extra_columns = [
 ]
 
 # =====================================================
-# PRINT HTML (TAB 1 ONLY)
+# PRINT FUNCTION (TAB 1)
 # =====================================================
 
 def create_print_html(row):
 
-    half = len(unsurvey_columns)//2
-    left = unsurvey_columns[:half]
-    right = unsurvey_columns[half:]
+    half = len(base_columns)//2
+    left = base_columns[:half]
+    right = base_columns[half:]
 
     def make_rows(cols):
         html=""
@@ -82,13 +84,14 @@ Signature: __________________
     return base64.b64encode(html.encode()).decode()
 
 # =====================================================
-# GRID DISPLAY FUNCTIONS
+# AGGRID FUNCTIONS
 # =====================================================
 
-def display_grid_with_print(df):
+def display_grid(df, print_enable=False):
 
-    df["print_data"]=df.apply(create_print_html,axis=1)
-    df.insert(1,"Print","")
+    if print_enable:
+        df["print_data"]=df.apply(create_print_html,axis=1)
+        df.insert(1,"Print","")
 
     cell_renderer = JsCode("""
     class Renderer {
@@ -107,25 +110,32 @@ def display_grid_with_print(df):
     }
     """)
 
+    # Aging color style
+    aging_style = JsCode("""
+    function(params) {
+        if (params.value > 30) {
+            return {'backgroundColor': '#ffcccc'};
+        } else if (params.value > 7) {
+            return {'backgroundColor': '#fff3cd'};
+        } else {
+            return {'backgroundColor': '#d4edda'};
+        }
+    }
+    """)
+
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
-    gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0, pinned="left")
-    gb.configure_column("print_data", hide=True)
+
+    if print_enable:
+        gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0, pinned="left")
+        gb.configure_column("print_data", hide=True)
+
+    if "Aging Days" in df.columns:
+        gb.configure_column("Aging Days", cellStyle=aging_style)
 
     AgGrid(df,
            gridOptions=gb.build(),
            allow_unsafe_jscode=True,
-           fit_columns_on_grid_load=True,
-           height=500,
-           theme="streamlit")
-
-def display_grid_simple(df):
-
-    gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
-
-    AgGrid(df,
-           gridOptions=gb.build(),
            fit_columns_on_grid_load=True,
            height=500,
            theme="streamlit")
@@ -152,8 +162,7 @@ if file:
     df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
     # Date conversion
-    date_cols = ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]
-    for col in date_cols:
+    for col in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
         if col in df.columns:
             df[col]=pd.to_datetime(df[col],errors="coerce")
 
@@ -161,7 +170,7 @@ if file:
     scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
     scheme_filter = st.sidebar.selectbox("Name Of Scheme", ["All"] + list(scheme_list))
 
-    # Always remove
+    # Remove excluded
     df=df[df["SR Type"].str.lower()!="change of name"]
     df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
@@ -181,7 +190,7 @@ if file:
     today = pd.Timestamp.today()
 
     # =====================================================
-    # TAB DATA PREP
+    # STAGE FILTERS
     # =====================================================
 
     df1=df[
@@ -192,7 +201,6 @@ if file:
         )
         &(df["SR Status"].str.upper()=="OPEN")
     ].copy()
-
     df1["Aging Days"]=(today - df1["RC Date"]).dt.days
 
     df2=df[
@@ -200,7 +208,6 @@ if file:
         &(df["Date Of Est Appr Launch"].isna())
         &(df["SR Status"].str.upper()=="OPEN")
     ].copy()
-
     df2["Aging Days"]=(today - df2["Date Of Survey"]).dt.days
 
     df3=df[
@@ -209,39 +216,47 @@ if file:
         &(df["Date Of FQ Issued"].isna())
         &(df["SR Status"].str.upper()=="OPEN")
     ].copy()
-
     df3["Aging Days"]=(today - df3["Date Of Est Appr Launch"]).dt.days
 
     # =====================================================
-    # STAGE SUMMARY CARDS
+    # TOP SUMMARY
     # =====================================================
 
-    col1,col2,col3=st.columns(3)
-
+    col1,col2,col3 = st.columns(3)
     col1.metric("📝 Survey Pending",len(df1))
     col2.metric("📐 Estimate Pending",len(df2))
     col3.metric("💰 FQ Issue Pending",len(df3))
+
+    total_open = len(df1)+len(df2)+len(df3)
+    all_df = pd.concat([df1,df2,df3])
+    over30 = len(all_df[all_df["Aging Days"]>30])
+    oldest = all_df["Aging Days"].max() if not all_df.empty else 0
+
+    col4,col5,col6 = st.columns(3)
+    col4.metric("Total OPEN SR", total_open)
+    col5.metric(">30 Days Cases", over30)
+    col6.metric("Oldest Case (Days)", int(oldest) if pd.notna(oldest) else 0)
 
     # =====================================================
     # TABS
     # =====================================================
 
-    tab1,tab2,tab3=st.tabs(["Unsurvey Applications","Estimate Pending","FQ Issue Pending"])
+    tab1,tab2,tab3 = st.tabs(["Unsurvey Applications","Estimate Pending","FQ Issue Pending"])
 
     with tab1:
-        df1=df1[unsurvey_columns + ["Aging Days"]]
+        df1=df1[base_columns + ["Aging Days"]]
         df1.insert(0,"Sr. No.",range(1,len(df1)+1))
-        display_grid_with_print(df1)
+        display_grid(df1, print_enable=True)
 
     with tab2:
-        df2=df2[unsurvey_columns + extra_columns + ["Aging Days"]]
+        df2=df2[base_columns + extra_columns + ["Aging Days"]]
         df2.insert(0,"Sr. No.",range(1,len(df2)+1))
-        display_grid_simple(df2)
+        display_grid(df2)
 
     with tab3:
-        df3=df3[unsurvey_columns + extra_columns + ["Aging Days"]]
+        df3=df3[base_columns + extra_columns + ["Workflow Type","Aging Days"]]
         df3.insert(0,"Sr. No.",range(1,len(df3)+1))
-        display_grid_simple(df3)
+        display_grid(df3)
 
 else:
     st.info("Upload file to begin")
