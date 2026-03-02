@@ -20,7 +20,7 @@ show_pmsy = st.sidebar.checkbox("PMSY RTS")
 show_rooftop = st.sidebar.checkbox("LT Rooftop")
 
 # =====================================================
-# REQUIRED COLUMNS
+# BASE COLUMNS (TAB 1)
 # =====================================================
 
 unsurvey_columns = [
@@ -32,7 +32,21 @@ unsurvey_columns = [
 ]
 
 # =====================================================
-# PRINT HTML (ONLY USED IN TAB 1)
+# EXTRA COLUMNS (TAB 2 & TAB 3 ONLY)
+# =====================================================
+
+extra_columns = [
+    "Survey Category",
+    "Date Of Survey",
+    "Date Of Est Appr Launch",
+    "Date Of Est Appr Recv",
+    "Ts Amount",
+    "Ts No",
+    "Date Of FQ Issued"
+]
+
+# =====================================================
+# PRINT FUNCTION (TAB 1 ONLY)
 # =====================================================
 
 def create_print_html(row):
@@ -59,36 +73,28 @@ td {{border:1px solid black;padding:4px;font-size:11px;}}
 .sketch {{height:350px;border:1px solid black;margin-top:10px;}}
 </style>
 </head>
-
 <body onload="window.print()">
-
 <h3 style="text-align:center;">Electricity Connection Survey Form</h3>
-
 <div class="grid">
 <table>{make_rows(left)}</table>
 <table>{make_rows(right)}</table>
 </div>
-
 <br>
-
 <table>
 <tr><td class="l">Survey Category</td><td></td></tr>
 <tr><td class="l">Feeder Name</td><td></td></tr>
 <tr><td class="l">Date of Survey</td><td></td></tr>
 </table>
-
 <div class="sketch"></div>
-
 <br>
 Signature: __________________
-
 </body>
 </html>
 """
     return base64.b64encode(html.encode()).decode()
 
 # =====================================================
-# GRID DISPLAY FUNCTIONS
+# GRID FUNCTIONS
 # =====================================================
 
 def display_grid_with_print(df):
@@ -114,14 +120,12 @@ def display_grid_with_print(df):
     """)
 
     gb = GridOptionsBuilder.from_dataframe(df)
-
     gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
     gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0, pinned="left")
     gb.configure_column("print_data", hide=True)
 
-    gridOptions = gb.build()
-
-    AgGrid(df, gridOptions=gridOptions,
+    AgGrid(df,
+           gridOptions=gb.build(),
            allow_unsafe_jscode=True,
            fit_columns_on_grid_load=True,
            height=500,
@@ -130,12 +134,10 @@ def display_grid_with_print(df):
 def display_grid_simple(df):
 
     gb = GridOptionsBuilder.from_dataframe(df)
-
     gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
 
-    gridOptions = gb.build()
-
-    AgGrid(df, gridOptions=gridOptions,
+    AgGrid(df,
+           gridOptions=gb.build(),
            fit_columns_on_grid_load=True,
            height=500,
            theme="streamlit")
@@ -155,20 +157,22 @@ if file:
     else:
         df = pd.read_excel(file, engine="xlrd")
 
+    # CLEAN
     df["SR Type"]=df["SR Type"].astype(str).str.strip()
     df["Name Of Scheme"]=df["Name Of Scheme"].astype(str).str.strip()
     df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
     df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
-    if "Date Of Est Appr Launch" in df.columns:
-        df["Date Of Est Appr Launch"]=pd.to_datetime(df["Date Of Est Appr Launch"],errors="coerce")
+    # Date conversions (safe)
+    for col in ["Date Of Est Appr Launch","Date Of FQ Issued"]:
+        if col in df.columns:
+            df[col]=pd.to_datetime(df[col],errors="coerce")
 
-    if "Date Of FQ Issued" in df.columns:
-        df["Date Of FQ Issued"]=pd.to_datetime(df["Date Of FQ Issued"],errors="coerce")
-
+    # Scheme filter
     scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
     scheme_filter = st.sidebar.selectbox("Name Of Scheme", ["All"] + list(scheme_list))
 
+    # Always remove
     df=df[df["SR Type"].str.lower()!="change of name"]
     df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
@@ -184,6 +188,10 @@ if file:
 
     if scheme_filter!="All":
         df=df[df["Name Of Scheme"]==scheme_filter]
+
+    # =====================================================
+    # TABS
+    # =====================================================
 
     tab1, tab2, tab3 = st.tabs([
         "Unsurvey Applications",
@@ -219,7 +227,7 @@ if file:
             &(df["SR Status"].str.upper()=="OPEN")
         ]
 
-        df2=df2[unsurvey_columns]
+        df2=df2[unsurvey_columns + extra_columns]
         df2.insert(0,"Sr. No.",range(1,len(df2)+1))
         display_grid_simple(df2)
 
@@ -235,7 +243,7 @@ if file:
             &(df["SR Status"].str.upper()=="OPEN")
         ]
 
-        df3=df3[unsurvey_columns]
+        df3=df3[unsurvey_columns + extra_columns]
         df3.insert(0,"Sr. No.",range(1,len(df3)+1))
         display_grid_simple(df3)
 
