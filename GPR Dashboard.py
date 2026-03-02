@@ -7,7 +7,6 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 import base64
 
 st.set_page_config(page_title="SR Stage Dashboard", layout="wide")
-
 st.title("⚡ SR Stage Monitoring Dashboard")
 
 # =====================================================
@@ -16,89 +15,29 @@ st.title("⚡ SR Stage Monitoring Dashboard")
 
 st.sidebar.header("Filters")
 
-# SR Type filters (exclusive selection)
 show_shift = st.sidebar.checkbox("Connection Shifting (Non Cons)")
 show_pmsy = st.sidebar.checkbox("PMSY RTS")
 show_rooftop = st.sidebar.checkbox("LT Rooftop")
-
-# Scheme filter placeholder (will populate after upload)
-scheme_filter = None
-
 
 # =====================================================
 # REQUIRED COLUMNS
 # =====================================================
 
 unsurvey_columns = [
-    "Name Of Subdivision",
-    "SR Number",
-    "SR Type",
-    "Name Of Applicant",
-    "Address1",
-    "Address2",
-    "District",
-    "Taluka",
-    "Village Or City",
-    "Consumer Category",
-    "Sub Category",
-    "Name Of Scheme",
-    "Demand Load",
-    "Load Uom",
-    "Tariff",
-    "RC Date",
-    "RC MR NO",
-    "RC Charge",
-    "SR Status",
-    "Rev Land Syrvey No"
+    "Name Of Subdivision","SR Number","SR Type","Name Of Applicant",
+    "Address1","Address2","District","Taluka","Village Or City",
+    "Consumer Category","Sub Category","Name Of Scheme",
+    "Demand Load","Load Uom","Tariff","RC Date","RC MR NO",
+    "RC Charge","SR Status","Rev Land Syrvey No"
 ]
 
 # =====================================================
-# WORD FORM GENERATOR (UNCHANGED)
-# =====================================================
-
-def generate_word_form(row):
-
-    doc = Document()
-
-    title = doc.add_heading("Electricity Connection Survey Form", 0)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    half = len(unsurvey_columns)//2
-
-    table = doc.add_table(rows=0, cols=4)
-    table.style = "Table Grid"
-
-    for i in range(half):
-        r = table.add_row().cells
-        r[0].text = unsurvey_columns[i]
-        r[1].text = str(row[unsurvey_columns[i]])
-        r[2].text = unsurvey_columns[i+half]
-        r[3].text = str(row[unsurvey_columns[i+half]])
-
-    doc.add_paragraph("\nSurvey Category: __________________")
-    doc.add_paragraph("Feeder Name: __________________")
-    doc.add_paragraph("Date of Survey: __________________")
-
-    doc.add_paragraph("\nSite Sketch:")
-    doc.add_paragraph("\n"*4)
-
-    doc.add_paragraph("\nSignature: __________________")
-
-    buffer = BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-
-    return buffer
-
-
-# =====================================================
-# PRINT HTML GENERATOR (UNCHANGED)
+# PRINT HTML (ONLY USED IN TAB 1)
 # =====================================================
 
 def create_print_html(row):
 
     half = len(unsurvey_columns)//2
-
     left = unsurvey_columns[:half]
     right = unsurvey_columns[half:]
 
@@ -141,15 +80,65 @@ td {{border:1px solid black;padding:4px;font-size:11px;}}
 <div class="sketch"></div>
 
 <br>
-
 Signature: __________________
 
 </body>
 </html>
 """
-
     return base64.b64encode(html.encode()).decode()
 
+# =====================================================
+# GRID DISPLAY FUNCTIONS
+# =====================================================
+
+def display_grid_with_print(df):
+
+    df["print_data"]=df.apply(create_print_html,axis=1)
+    df.insert(1,"Print","")
+
+    cell_renderer = JsCode("""
+    class Renderer {
+        init(params) {
+            this.eGui = document.createElement('span');
+            this.eGui.innerHTML = '🖨';
+            this.eGui.style.cursor = 'pointer';
+            this.eGui.style.fontSize = '18px';
+            this.eGui.addEventListener('click', () => {
+                const win = window.open("");
+                win.document.write(atob(params.data.print_data));
+                win.document.close();
+            });
+        }
+        getGui() { return this.eGui; }
+    }
+    """)
+
+    gb = GridOptionsBuilder.from_dataframe(df)
+
+    gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
+    gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0, pinned="left")
+    gb.configure_column("print_data", hide=True)
+
+    gridOptions = gb.build()
+
+    AgGrid(df, gridOptions=gridOptions,
+           allow_unsafe_jscode=True,
+           fit_columns_on_grid_load=True,
+           height=500,
+           theme="streamlit")
+
+def display_grid_simple(df):
+
+    gb = GridOptionsBuilder.from_dataframe(df)
+
+    gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1, minWidth=130)
+
+    gridOptions = gb.build()
+
+    AgGrid(df, gridOptions=gridOptions,
+           fit_columns_on_grid_load=True,
+           height=500,
+           theme="streamlit")
 
 # =====================================================
 # FILE UPLOAD
@@ -171,138 +160,84 @@ if file:
     df["Survey Category"]=df["Survey Category"].astype(str).str.strip()
     df["SR Status"]=df["SR Status"].astype(str).str.strip()
 
-    # =====================================================
-    # NEW: SCHEME FILTER
-    # =====================================================
+    if "Date Of Est Appr Launch" in df.columns:
+        df["Date Of Est Appr Launch"]=pd.to_datetime(df["Date Of Est Appr Launch"],errors="coerce")
+
+    if "Date Of FQ Issued" in df.columns:
+        df["Date Of FQ Issued"]=pd.to_datetime(df["Date Of FQ Issued"],errors="coerce")
 
     scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
-
-    scheme_filter = st.sidebar.selectbox(
-        "Name Of Scheme",
-        ["All"] + list(scheme_list)
-    )
-
-    # =====================================================
-    # REMOVE ALWAYS EXCLUDED
-    # =====================================================
+    scheme_filter = st.sidebar.selectbox("Name Of Scheme", ["All"] + list(scheme_list))
 
     df=df[df["SR Type"].str.lower()!="change of name"]
     df=df[df["Name Of Scheme"].str.lower()!="spa schemes"]
 
-    # =====================================================
-    # SR TYPE EXCLUSIVE FILTER
-    # =====================================================
+    selected_types=[]
+    if show_shift: selected_types.append("Connection Shifting(Non Cons)")
+    if show_pmsy: selected_types.append("PMSY RTS")
+    if show_rooftop: selected_types.append("LT Rooftop")
 
-    selected_types = []
-
-    if show_shift:
-        selected_types.append("Connection Shifting(Non Cons)")
-
-    if show_pmsy:
-        selected_types.append("PMSY RTS")
-
-    if show_rooftop:
-        selected_types.append("LT Rooftop")
-
-    if len(selected_types) > 0:
-        df = df[df["SR Type"].isin(selected_types)]
+    if selected_types:
+        df=df[df["SR Type"].isin(selected_types)]
     else:
-        df = df[
-            ~df["SR Type"].isin([
-                "Connection Shifting(Non Cons)",
-                "PMSY RTS",
-                "LT Rooftop"
-            ])
+        df=df[~df["SR Type"].isin(["Connection Shifting(Non Cons)","PMSY RTS","LT Rooftop"])]
+
+    if scheme_filter!="All":
+        df=df[df["Name Of Scheme"]==scheme_filter]
+
+    tab1, tab2, tab3 = st.tabs([
+        "Unsurvey Applications",
+        "Estimate Pending",
+        "FQ Issue Pending"
+    ])
+
+    # ================= TAB 1 =================
+
+    with tab1:
+
+        df1=df[
+            (
+                df["Survey Category"].isna()
+                |(df["Survey Category"]=="")
+                |(df["Survey Category"].str.lower()=="nan")
+            )
+            &(df["SR Status"].str.upper()=="OPEN")
         ]
 
-    # =====================================================
-    # SCHEME FILTER APPLY
-    # =====================================================
+        df1=df1[unsurvey_columns]
+        df1.insert(0,"Sr. No.",range(1,len(df1)+1))
+        display_grid_with_print(df1)
 
-    if scheme_filter != "All":
-        df = df[df["Name Of Scheme"] == scheme_filter]
+    # ================= TAB 2 =================
 
-    # =====================================================
-    # UNSURVEY OPEN FILTER
-    # =====================================================
+    with tab2:
 
-    df=df[
-        (
-            df["Survey Category"].isna()
-            |(df["Survey Category"]=="")
-            |(df["Survey Category"].str.lower()=="nan")
-        )
-        &(df["SR Status"].str.upper()=="OPEN")
-    ]
+        df2=df[
+            (df["Survey Category"].notna())
+            &(df["Survey Category"]!="")
+            &(df["Date Of Est Appr Launch"].isna())
+            &(df["SR Status"].str.upper()=="OPEN")
+        ]
 
-    df=df[unsurvey_columns]
+        df2=df2[unsurvey_columns]
+        df2.insert(0,"Sr. No.",range(1,len(df2)+1))
+        display_grid_simple(df2)
 
-    df.insert(0,"Sr. No.",range(1,len(df)+1))
+    # ================= TAB 3 =================
 
-    df["print_data"]=df.apply(create_print_html,axis=1)
+    with tab3:
 
-    df.insert(1,"Print","")
+        df3=df[
+            (df["Survey Category"].notna())
+            &(df["Survey Category"]!="")
+            &(df["Date Of Est Appr Launch"].notna())
+            &(df["Date Of FQ Issued"].isna())
+            &(df["SR Status"].str.upper()=="OPEN")
+        ]
 
-    # =====================================================
-    # ICON RENDERER (UNCHANGED)
-    # =====================================================
-
-    cell_renderer = JsCode("""
-    class Renderer {
-        init(params) {
-            this.eGui = document.createElement('span');
-            this.eGui.innerHTML = '🖨';
-            this.eGui.style.cursor = 'pointer';
-            this.eGui.style.fontSize = '18px';
-
-            this.eGui.addEventListener('click', () => {
-                const win = window.open("");
-                win.document.write(atob(params.data.print_data));
-                win.document.close();
-            });
-        }
-        getGui() {
-            return this.eGui;
-        }
-    }
-    """)
-
-    gb = GridOptionsBuilder.from_dataframe(df)
-
-    gb.configure_default_column(
-        filter=True,
-        sortable=True,
-        resizable=True,
-        flex=1,
-        minWidth=130
-    )
-
-    gb.configure_column(
-        "Print",
-        cellRenderer=cell_renderer,
-        width=70,
-        flex=0,
-        pinned="left"
-    )
-
-    gb.configure_column("print_data", hide=True)
-
-    gb.configure_grid_options(
-        domLayout='normal',
-        suppressSizeToFit=False
-    )
-
-    gridOptions = gb.build()
-
-    AgGrid(
-        df,
-        gridOptions=gridOptions,
-        allow_unsafe_jscode=True,
-        fit_columns_on_grid_load=True,
-        height=500,
-        theme="streamlit"
-    )
+        df3=df3[unsurvey_columns]
+        df3.insert(0,"Sr. No.",range(1,len(df3)+1))
+        display_grid_simple(df3)
 
 else:
-
     st.info("Upload file to begin")
