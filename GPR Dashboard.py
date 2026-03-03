@@ -13,7 +13,7 @@ st.markdown("## ⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
 # =====================================================
-# SAFE LOGO LOAD (No crash if missing)
+# SAFE LOGO LOAD
 # =====================================================
 
 LOGO_BASE64 = ""
@@ -22,7 +22,7 @@ if os.path.exists("mgvcl_logo.png"):
         LOGO_BASE64 = base64.b64encode(f.read()).decode()
 
 # =====================================================
-# PRINT FUNCTION (Gujarati Survey Form)
+# PRINT FUNCTION (AS PER ATTACHED FORMAT)
 # =====================================================
 
 def create_print_html(row):
@@ -30,77 +30,133 @@ def create_print_html(row):
     exist_cons = row.get("Exist. Cons. No. (For LE)", row.get("Consumer No", ""))
 
     html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-@page {{ size: A4; margin: 20mm; }}
-body {{ font-family: "Nirmala UI","Shruti","Arial Unicode MS",sans-serif; font-size:14px; }}
-.header {{ text-align:center; font-weight:bold; font-size:18px; }}
-.subheader {{ text-align:center; }}
-.title {{ text-align:center; font-size:20px; font-weight:bold; text-decoration: underline; margin:10px 0; }}
-table {{ width:100%; border-collapse:collapse; }}
-td {{ border:1px solid black; padding:6px; vertical-align:top; }}
-.logo {{ position:absolute; top:20px; left:20px; width:80px; }}
-.sketch {{ height:150px; }}
-</style>
-</head>
+<div style="font-family:'Nirmala UI','Shruti',sans-serif;font-size:14px;">
 
-<body>
+<div style="text-align:center;font-weight:bold;font-size:18px;">
+મધ્ય ગુજરાત વીજ કંપની લી.
+</div>
 
-{"<img src='data:image/png;base64," + LOGO_BASE64 + "' class='logo'>" if LOGO_BASE64 else ""}
+<div style="text-align:center;">
+(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર
+</div>
 
-<div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
-<div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
-<div class="title">Survey Form</div>
+<div style="text-align:center;font-size:18px;font-weight:bold;margin:10px 0;text-decoration:underline;">
+Survey Form
+</div>
 
-<table>
-<tr><td>૧</td><td>અરજદારનું નામ</td><td>{row.get("Name Of Applicant","")}</td></tr>
-<tr><td>૨</td><td>અરજદારનું સરનામું</td>
-<td>{row.get("Address1","")} {row.get("Address2","")} ,
-{row.get("Village Or City","")} ,
-{row.get("Taluka","")} ,
-{row.get("District","")}</td></tr>
+<table border="1" style="width:100%;border-collapse:collapse;">
+<tr>
+<td>તારીખ :</td>
+<td></td>
+<td style="text-align:right;">{row.get("Name Of Scheme","")}</td>
+</tr>
+</table>
 
-<tr><td>૩</td><td>ફોન નંબર</td>
-<td>{row.get("Address2","")} | SR No: {row.get("SR Number","")}</td></tr>
+<br>
 
-<tr><td>૪</td><td>વપરાશનો હેતુ</td>
-<td>{row.get("Consumer Category","")} |
+<table border="1" style="width:100%;border-collapse:collapse;">
+
+<tr>
+<td width="5%">૧</td>
+<td width="30%">અરજદારનું નામ</td>
+<td>{row.get("Name Of Applicant","")}</td>
+</tr>
+
+<tr>
+<td>૨</td>
+<td>અરજદારનું સરનામું</td>
+<td>
+{row.get("Address1","")} {row.get("Address2","")},
+{row.get("Village Or City","")},
+{row.get("Taluka","")},
+{row.get("District","")}
+</td>
+</tr>
+
+<tr>
+<td>૩</td>
+<td>ફોન નંબર</td>
+<td>{row.get("Address2","")} &nbsp;&nbsp; SR No: {row.get("SR Number","")}</td>
+</tr>
+
+<tr>
+<td>૪</td>
+<td>વપરાશનો હેતુ</td>
+<td>
+{row.get("Consumer Category","")} |
 {row.get("SR Type","")} |
-{row.get("Demand Load","")} {row.get("Load Uom","")}</td></tr>
+{row.get("Demand Load","")} {row.get("Load Uom","")}
+</td>
+</tr>
 
-<tr><td>૫</td><td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
-<td>{row.get("RC Charge","")} |
+<tr>
+<td>૫</td>
+<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
+<td>
+{row.get("RC Charge","")} |
 {row.get("RC MR NO","")} |
-{row.get("RC Date","")}</td></tr>
+{row.get("RC Date","")}
+</td>
+</tr>
 
-<tr><td>૬</td><td>સર્વે કેટેગરી</td>
-<td>{row.get("Survey Category","")}</td></tr>
+<tr>
+<td>૬</td>
+<td>બાજુવાળાનો ગ્રાહક નંબર</td>
+<td></td>
+</tr>
 
-<tr><td>૭</td><td>Exist. Cons. No. (For LE)</td>
-<td>{exist_cons}</td></tr>
+<tr>
+<td>૭</td>
+<td>સર્વે કેટેગરી</td>
+<td>{row.get("Survey Category","")}</td>
+</tr>
 
-<tr><td>૮</td><td colspan="2" class="sketch"></td></tr>
+<tr>
+<td>૮</td>
+<td>ફીડર / ટ્રાન્સફર / પોલ વિગત</td>
+<td></td>
+</tr>
+
+<tr>
+<td>૯</td>
+<td>મકાન વિગત</td>
+<td></td>
+</tr>
+
+<tr>
+<td>૧૦</td>
+<td>અન્ય વિજ જોડાણ વિગત</td>
+<td></td>
+</tr>
+
+<tr>
+<td>૧૧</td>
+<td>ગામતળ / સિમતલ</td>
+<td></td>
+</tr>
+
+<tr>
+<td>૧૨</td>
+<td>Exist. Cons. No. (For LE)</td>
+<td>{exist_cons}</td>
+</tr>
+
+<tr>
+<td>૧૩</td>
+<td colspan="2" style="height:150px;"></td>
+</tr>
+
 </table>
 
 <br><br>
 Signature : _______________________
 
-<script>
-window.onload = function() {{
-    window.print();
-}}
-</script>
-
-</body>
-</html>
+</div>
 """
     return base64.b64encode(html.encode("utf-8")).decode()
 
 # =====================================================
-# GRID FUNCTION (Defined BEFORE use)
+# GRID FUNCTION
 # =====================================================
 
 def display_grid(df, print_enable=False):
@@ -118,9 +174,12 @@ def display_grid(df, print_enable=False):
             this.eGui.innerHTML = '🖨';
             this.eGui.style.cursor = 'pointer';
             this.eGui.style.fontSize = '18px';
+
             this.eGui.addEventListener('click', () => {
-                const win = window.open("");
-                win.document.write(atob(params.data.print_data));
+
+                const win = window.open("", "_blank");
+                win.document.open("text/html","replace");
+                win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>" + atob(params.data.print_data) + "</body></html>");
                 win.document.close();
             });
         }
@@ -151,17 +210,10 @@ def display_grid(df, print_enable=False):
     )
 
 # =====================================================
-# SIDEBAR FILTERS
+# SIDEBAR FILTERS (RESTORED)
 # =====================================================
 
 st.sidebar.header("Filters")
-show_shift = st.sidebar.checkbox("Connection Shifting (Non Cons)")
-show_pmsy = st.sidebar.checkbox("PMSY RTS")
-show_rooftop = st.sidebar.checkbox("LT Rooftop")
-
-# =====================================================
-# FILE UPLOAD
-# =====================================================
 
 file = st.file_uploader("Upload Excel/CSV", type=["xlsx","xls","csv"])
 
@@ -169,6 +221,14 @@ if file:
 
     df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
 
+    # Scheme Filter Restored
+    scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
+    scheme_filter = st.sidebar.selectbox("Name Of Scheme", ["All"] + scheme_list)
+
+    if scheme_filter != "All":
+        df = df[df["Name Of Scheme"] == scheme_filter]
+
+    # Date conversion
     for col in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
