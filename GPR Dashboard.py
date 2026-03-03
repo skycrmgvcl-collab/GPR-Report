@@ -33,7 +33,7 @@ def create_print_html(row):
 <div style="font-family:'Nirmala UI','Shruti',sans-serif;font-size:14px;">
 
 <div style="text-align:center;font-weight:bold;font-size:18px;">
-મધ્ય ગુજરાત વીજ કંપની લી.
+મધ્ય ગુજરાત વિજ કંપની લિ.
 </div>
 
 <div style="text-align:center;">
