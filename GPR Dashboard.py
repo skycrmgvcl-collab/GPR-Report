@@ -2,6 +2,18 @@ import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 import base64
+import os
+
+# ==============================
+# SAFE LOGO LOAD (LOAD ONCE)
+# ==============================
+
+LOGO_BASE64 = ""
+logo_path = "mgvcl_logo.png"
+
+if os.path.exists(logo_path):
+    with open(logo_path, "rb") as f:
+        LOGO_BASE64 = base64.b64encode(f.read()).decode()
 
 st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
 
@@ -46,11 +58,7 @@ extra_columns = [
 
 def create_print_html(row):
 
-    import base64
-
-    # ===== Convert logo to base64 =====
-    with open("mgvcl_logo.png", "rb") as image_file:
-        logo_base64 = base64.b64encode(image_file.read()).decode()
+    exist_cons = row.get("Exist. Cons. No. (For LE)", row.get("Consumer No", ""))
 
     html = f"""
 <html>
@@ -66,26 +74,6 @@ def create_print_html(row):
 body {{
     font-family: 'Noto Sans Gujarati','Shruti',sans-serif;
     font-size: 13px;
-}}
-
-.header {{
-    text-align:center;
-    font-weight:bold;
-    font-size:18px;
-}}
-
-.subheader {{
-    text-align:center;
-    font-size:15px;
-}}
-
-.title {{
-    text-align:center;
-    font-size:20px;
-    font-weight:bold;
-    margin-top:10px;
-    margin-bottom:10px;
-    text-decoration: underline;
 }}
 
 table {{
@@ -105,6 +93,25 @@ td {{
     width:80px;
 }}
 
+.header {{
+    text-align:center;
+    font-weight:bold;
+    font-size:18px;
+}}
+
+.subheader {{
+    text-align:center;
+    font-size:15px;
+}}
+
+.title {{
+    text-align:center;
+    font-size:20px;
+    font-weight:bold;
+    margin:10px 0;
+    text-decoration: underline;
+}}
+
 .sketch {{
     height:150px;
 }}
@@ -114,31 +121,16 @@ td {{
 
 <body onload="window.print()">
 
-<img src="data:image/png;base64,{logo_base64}" class="logo">
+{"<img src='data:image/png;base64," + LOGO_BASE64 + "' class='logo'>" if LOGO_BASE64 else ""}
 
-<div class="header">
-મધ્ય ગુજરાત વીજ કંપની લી.
-</div>
-
-<div class="subheader">
-(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર
-</div>
-
+<div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
+<div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
 <div class="title">Survey Form</div>
 
 <table>
 <tr>
-<td>તારીખ :- __________________</td>
-<td style="text-align:right;">ND SCHEMES &nbsp;&nbsp; 2026</td>
-</tr>
-</table>
-
-<br>
-
-<table>
-<tr>
-<td width="5%">૧</td>
-<td width="30%">અરજદારનું નામ</td>
+<td>૧</td>
+<td>અરજદારનું નામ</td>
 <td>{row.get("Name Of Applicant","")}</td>
 </tr>
 
@@ -147,18 +139,16 @@ td {{
 <td>અરજદારનું સરનામું</td>
 <td>
 {row.get("Address1","")} {row.get("Address2","")} ,
-{row.get("District","")} ,
+{row.get("Village Or City","")} ,
 {row.get("Taluka","")} ,
-{row.get("Village Or City","")}
+{row.get("District","")}
 </td>
 </tr>
 
 <tr>
 <td>૩</td>
 <td>ફોન નંબર</td>
-<td>{row.get("Address2","")} &nbsp;&nbsp;&nbsp;
-<b>SR No:</b> {row.get("SR Number","")}
-</td>
+<td>{row.get("Address2","")} &nbsp;&nbsp; SR No: {row.get("SR Number","")}</td>
 </tr>
 
 <tr>
@@ -177,98 +167,76 @@ td {{
 <td>
 {row.get("RC Charge","")} |
 {row.get("RC MR NO","")} |
-તારીખ : {row.get("RC Date","")}
+{row.get("RC Date","")}
 </td>
 </tr>
-</table>
 
-<br>
-
-<b>સર્વેની વિગતો :</b>
-
-<table>
 <tr>
 <td>૬</td>
-<td>બાજુવાળાનો ગ્રાહક નંબર</td>
-<td colspan="2"></td>
+<td>સર્વે કેટેગરી</td>
+<td>{row.get("Survey Category","")}</td>
 </tr>
 
 <tr>
-<td>૭-૧</td>
-<td>ફીડરનું નામ</td>
-<td></td>
-<td>ફીડર કેટેગરી</td>
-</tr>
-
-<tr>
-<td>૭-૨</td>
-<td>ટ્રાન્સફરનું નામ</td>
-<td></td>
-<td>DTR કપેસિટી</td>
-</tr>
-
-<tr>
-<td>૭-૩</td>
-<td>એલ ટી પોલ નંબર</td>
-<td></td>
-<td>જીઓ સર્વે (હા/ના)</td>
-</tr>
-
-<tr>
-<td>૭-૪</td>
-<td colspan="3">મકાન ઉપરથી કે નજીકથી એચ.ટી/એલ.ટી લાઇન પસાર થાય છે કે કેમ?</td>
+<td>૭</td>
+<td>Exist. Cons. No. (For LE)</td>
+<td>{exist_cons}</td>
 </tr>
 
 <tr>
 <td>૮</td>
-<td>મકાન કેટલા માળનું છે?</td>
-<td></td>
-<td>કાચું / પાકું</td>
-</tr>
-
-<tr>
-<td>૯</td>
-<td colspan="3">મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે કે કેમ?</td>
-</tr>
-
-<tr>
-<td>૧૦</td>
-<td colspan="3">અન્ય વિજ જોડાણ હોય તો વિગત</td>
-</tr>
-
-<tr>
-<td>૧૨</td>
-<td colspan="3">ગામતળ માં છે કે સિમતલ માં?</td>
-</tr>
-
-<tr>
-<td>૧૩</td>
-<td>સર્વે કેટેગરી (A/B/C/D)</td>
-<td></td>
-<td>પોલ થી અંતર</td>
-</tr>
-
-<tr>
-<td>૧૪</td>
-<td colspan="3" class="sketch"></td>
+<td colspan="2" class="sketch"></td>
 </tr>
 </table>
 
-<br>
-
-<b>Exist. Cons. No. (For LE):</b>
-{row.get("Consumer No","")}
-
-<br><br><br>
-
+<br><br>
 Signature : _______________________
 
 </body>
 </html>
 """
-
     return base64.b64encode(html.encode("utf-8")).decode()
-# =====================================================
+    
+def display_grid(df, print_enable=False):
+
+    df = df.copy()
+
+    if print_enable:
+        df["print_data"] = df.apply(create_print_html, axis=1)
+        df.insert(1, "Print", "")
+
+    cell_renderer = JsCode("""
+    class Renderer {
+        init(params) {
+            this.eGui = document.createElement('span');
+            this.eGui.innerHTML = '🖨';
+            this.eGui.style.cursor = 'pointer';
+            this.eGui.style.fontSize = '18px';
+            this.eGui.addEventListener('click', () => {
+                const win = window.open("");
+                win.document.write(atob(params.data.print_data));
+                win.document.close();
+            });
+        }
+        getGui() { return this.eGui; }
+    }
+    """)
+
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(filter=True, sortable=True, resizable=True)
+
+    if print_enable:
+        gb.configure_column("Print", cellRenderer=cell_renderer, width=70)
+        gb.configure_column("print_data", hide=True)
+
+    AgGrid(
+        df,
+        gridOptions=gb.build(),
+        allow_unsafe_jscode=True,
+        height=500,
+        theme="streamlit"
+    )
+    # =====================================================
 # FILE UPLOAD
 # =====================================================
 
