@@ -46,51 +46,81 @@ extra_columns = [
 
 def create_print_html(row):
 
+    import base64
+
+    # ===== Convert logo to base64 =====
+    with open("mgvcl_logo.png", "rb") as image_file:
+        logo_base64 = base64.b64encode(image_file.read()).decode()
+
     html = f"""
 <html>
 <head>
+<meta charset="UTF-8">
 <style>
+
+@page {{
+    size: A4;
+    margin: 20mm;
+}}
+
 body {{
-    font-family: Arial;
-    padding: 25px;
+    font-family: 'Noto Sans Gujarati','Shruti',sans-serif;
     font-size: 13px;
 }}
+
 .header {{
     text-align:center;
     font-weight:bold;
+    font-size:18px;
 }}
+
+.subheader {{
+    text-align:center;
+    font-size:15px;
+}}
+
 .title {{
     text-align:center;
     font-size:20px;
+    font-weight:bold;
     margin-top:10px;
     margin-bottom:10px;
     text-decoration: underline;
 }}
+
 table {{
     width:100%;
     border-collapse:collapse;
 }}
+
 td {{
+    border:1px solid black;
     padding:6px;
-    vertical-align:top;
 }}
-.line {{
-    border-bottom:1px solid black;
-    display:inline-block;
-    width:100%;
+
+.logo {{
+    position:absolute;
+    top:20px;
+    left:20px;
+    width:80px;
 }}
-.section {{
-    font-weight:bold;
-    font-size:16px;
-    padding-top:10px;
+
+.sketch {{
+    height:150px;
 }}
+
 </style>
 </head>
 
 <body onload="window.print()">
 
+<img src="data:image/png;base64,{logo_base64}" class="logo">
+
 <div class="header">
-મધ્ય ગુજરાત વીજ કંપની લી.<br>
+મધ્ય ગુજરાત વીજ કંપની લી.
+</div>
+
+<div class="subheader">
 (ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર
 </div>
 
@@ -98,195 +128,146 @@ td {{
 
 <table>
 <tr>
-<td>તારીખ:- ____________________</td>
+<td>તારીખ :- __________________</td>
 <td style="text-align:right;">ND SCHEMES &nbsp;&nbsp; 2026</td>
-</tr>
-</table>
-
-<hr>
-
-<table>
-<tr>
-<td width="3%">૧</td>
-<td width="30%">અરજદારનું નામ :-</td>
-<td>{row.get("Name Of Applicant","")}</td>
-</tr>
-
-<tr>
-<td>૨</td>
-<td>અરજદારનું સરનામું :-</td>
-<td>{row.get("Address1","")} {row.get("Address2","")}, 
-{row.get("District","")} {row.get("Taluka","")} {row.get("Village Or City","")}</td>
-</tr>
-
-<tr>
-<td>૩</td>
-<td>ફોન નંબર :-</td>
-<td>{row.get("Address2","")} &nbsp;&nbsp;&nbsp; 
-<b>SR No.</b> {row.get("SR Number","")}</td>
-</tr>
-
-<tr>
-<td>૪</td>
-<td>વપરાશનો હેતુ :-</td>
-<td>{row.get("Consumer Category","")} &nbsp;&nbsp; 
-{row.get("SR Type","")} &nbsp;&nbsp; 
-{row.get("Demand Load","")} {row.get("Load Uom","")}</td>
-</tr>
-
-<tr>
-<td>૫</td>
-<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર :-</td>
-<td>{row.get("RC Charge","")} &nbsp;&nbsp; 
-{row.get("RC MR NO","")} &nbsp;&nbsp; 
-તારીખ:- {row.get("RC Date","")}</td>
 </tr>
 </table>
 
 <br>
 
-<div class="section">સર્વેની વિગતો :-</div>
-<hr>
+<table>
+<tr>
+<td width="5%">૧</td>
+<td width="30%">અરજદારનું નામ</td>
+<td>{row.get("Name Of Applicant","")}</td>
+</tr>
+
+<tr>
+<td>૨</td>
+<td>અરજદારનું સરનામું</td>
+<td>
+{row.get("Address1","")} {row.get("Address2","")} ,
+{row.get("District","")} ,
+{row.get("Taluka","")} ,
+{row.get("Village Or City","")}
+</td>
+</tr>
+
+<tr>
+<td>૩</td>
+<td>ફોન નંબર</td>
+<td>{row.get("Address2","")} &nbsp;&nbsp;&nbsp;
+<b>SR No:</b> {row.get("SR Number","")}
+</td>
+</tr>
+
+<tr>
+<td>૪</td>
+<td>વપરાશનો હેતુ</td>
+<td>
+{row.get("Consumer Category","")} |
+{row.get("SR Type","")} |
+{row.get("Demand Load","")} {row.get("Load Uom","")}
+</td>
+</tr>
+
+<tr>
+<td>૫</td>
+<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
+<td>
+{row.get("RC Charge","")} |
+{row.get("RC MR NO","")} |
+તારીખ : {row.get("RC Date","")}
+</td>
+</tr>
+</table>
+
+<br>
+
+<b>સર્વેની વિગતો :</b>
 
 <table>
 <tr>
 <td>૬</td>
-<td>બાજુવાળાનો ગ્રાહક નંબર :</td>
-<td><span class="line"></span></td>
+<td>બાજુવાળાનો ગ્રાહક નંબર</td>
+<td colspan="2"></td>
 </tr>
 
 <tr>
-<td>૭</td>
-<td>૧. ફીડરનું નામ :-</td>
-<td><span class="line"></span></td>
-<td>ફીડરનું કેટેગરી :-</td>
-<td><span class="line"></span></td>
-</tr>
-
-<tr>
+<td>૭-૧</td>
+<td>ફીડરનું નામ</td>
 <td></td>
-<td>૨. ટ્રાન્સફરનું નામ :-</td>
-<td><span class="line"></span></td>
-<td>DTR કપકીટી :-</td>
-<td><span class="line"></span></td>
+<td>ફીડર કેટેગરી</td>
 </tr>
 
 <tr>
+<td>૭-૨</td>
+<td>ટ્રાન્સફરનું નામ</td>
 <td></td>
-<td>૩. એલ ટી પોલ નંબર :-</td>
-<td><span class="line"></span></td>
-<td>જીઓ સર્વે (હા/ના)?</td>
-<td><span class="line"></span></td>
+<td>DTR કપેસિટી</td>
 </tr>
 
 <tr>
+<td>૭-૩</td>
+<td>એલ ટી પોલ નંબર</td>
 <td></td>
-<td>૪. મકાન ઉપરથી કે નજીકથી એચ.ટી/એલ.ટી લાઇન પસાર થાય છે કે કેમ?</td>
-<td colspan="3"><span class="line"></span></td>
+<td>જીઓ સર્વે (હા/ના)</td>
+</tr>
+
+<tr>
+<td>૭-૪</td>
+<td colspan="3">મકાન ઉપરથી કે નજીકથી એચ.ટી/એલ.ટી લાઇન પસાર થાય છે કે કેમ?</td>
 </tr>
 
 <tr>
 <td>૮</td>
-<td>સદર મકાન કેટલા માળનું છે. :-</td>
-<td><span class="line"></span></td>
-<td>મકાન કાચું છે કે પાકું? :-</td>
-<td><span class="line"></span></td>
+<td>મકાન કેટલા માળનું છે?</td>
+<td></td>
+<td>કાચું / પાકું</td>
 </tr>
 
 <tr>
 <td>૯</td>
-<td>સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે કે કેમ? :-</td>
-<td colspan="3"><span class="line"></span></td>
+<td colspan="3">મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે કે કેમ?</td>
 </tr>
 
 <tr>
 <td>૧૦</td>
-<td>અન્ય વિજ જોડાણ હોય તો તેની વિગત :-</td>
-<td colspan="3"><span class="line"></span></td>
+<td colspan="3">અન્ય વિજ જોડાણ હોય તો વિગત</td>
 </tr>
 
 <tr>
 <td>૧૨</td>
-<td>ગામતળ માં છે કે સિમતલ માં છે? :-</td>
-<td colspan="3"><span class="line"></span></td>
+<td colspan="3">ગામતળ માં છે કે સિમતલ માં?</td>
 </tr>
 
 <tr>
 <td>૧૩</td>
-<td>સર્વે કેટેગરી (A/B/C/D) :-</td>
-<td><span class="line"></span></td>
-<td>પોલ થી મકાન નું અંતર :-</td>
-<td><span class="line"></span></td>
+<td>સર્વે કેટેગરી (A/B/C/D)</td>
+<td></td>
+<td>પોલ થી અંતર</td>
 </tr>
 
 <tr>
 <td>૧૪</td>
-<td>નકશો તથા અન્ય વિગતો નીચે બતાવી :-</td>
-<td colspan="3"><div style="height:120px;border:1px solid black;"></div></td>
+<td colspan="3" class="sketch"></td>
 </tr>
 </table>
 
-<br><br>
+<br>
 
-<b>Exist. Cons. No. (For LE):</b> _____________________
+<b>Exist. Cons. No. (For LE):</b>
+{row.get("Consumer No","")}
 
 <br><br><br>
 
-Signature: ___________________________
+Signature : _______________________
 
 </body>
 </html>
 """
-    return base64.b64encode(html.encode()).decode()
-# =====================================================
-# AGGRID DISPLAY FUNCTION (NO COLOR CODING)
-# =====================================================
 
-def display_grid(df, print_enable=False):
-
-    if print_enable:
-        df["print_data"]=df.apply(create_print_html,axis=1)
-        df.insert(1,"Print","")
-
-    cell_renderer = JsCode("""
-    class Renderer {
-        init(params) {
-            this.eGui = document.createElement('span');
-            this.eGui.innerHTML = '🖨';
-            this.eGui.style.cursor = 'pointer';
-            this.eGui.style.fontSize = '18px';
-            this.eGui.addEventListener('click', () => {
-                const win = window.open("");
-                win.document.write(atob(params.data.print_data));
-                win.document.close();
-            });
-        }
-        getGui() { return this.eGui; }
-    }
-    """)
-
-    gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_default_column(
-        filter=True,
-        sortable=True,
-        resizable=True,
-        flex=1,
-        minWidth=130
-    )
-
-    if print_enable:
-        gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0, pinned="left")
-        gb.configure_column("print_data", hide=True)
-
-    AgGrid(
-        df,
-        gridOptions=gb.build(),
-        allow_unsafe_jscode=True,
-        fit_columns_on_grid_load=True,
-        height=500,
-        theme="streamlit"
-    )
-
+    return base64.b64encode(html.encode("utf-8")).decode()
 # =====================================================
 # FILE UPLOAD
 # =====================================================
