@@ -46,42 +46,198 @@ extra_columns = [
 
 def create_print_html(row):
 
-    half = len(base_columns)//2
-    left = base_columns[:half]
-    right = base_columns[half:]
-
-    def make_rows(cols):
-        html=""
-        for c in cols:
-            html += f"<tr><td><b>{c}</b></td><td>{row[c]}</td></tr>"
-        return html
-
-    html=f"""
+    html = f"""
 <html>
 <head>
 <style>
-body {{font-family:Arial;padding:20px;}}
-.grid {{display:grid;grid-template-columns:1fr 1fr;gap:10px;}}
-table {{width:100%;border-collapse:collapse;}}
-td {{border:1px solid black;padding:4px;font-size:11px;}}
-.sketch {{height:350px;border:1px solid black;margin-top:10px;}}
+body {{
+    font-family: Arial;
+    padding: 25px;
+    font-size: 13px;
+}}
+.header {{
+    text-align:center;
+    font-weight:bold;
+}}
+.title {{
+    text-align:center;
+    font-size:20px;
+    margin-top:10px;
+    margin-bottom:10px;
+    text-decoration: underline;
+}}
+table {{
+    width:100%;
+    border-collapse:collapse;
+}}
+td {{
+    padding:6px;
+    vertical-align:top;
+}}
+.line {{
+    border-bottom:1px solid black;
+    display:inline-block;
+    width:100%;
+}}
+.section {{
+    font-weight:bold;
+    font-size:16px;
+    padding-top:10px;
+}}
 </style>
 </head>
+
 <body onload="window.print()">
-<h3 style="text-align:center;">Electricity Connection Survey Form</h3>
-<div class="grid">
-<table>{make_rows(left)}</table>
-<table>{make_rows(right)}</table>
+
+<div class="header">
+મધ્ય ગુજરાત વીજ કંપની લી.<br>
+(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર
 </div>
+
+<div class="title">Survey Form</div>
+
+<table>
+<tr>
+<td>તારીખ:- ____________________</td>
+<td style="text-align:right;">ND SCHEMES &nbsp;&nbsp; 2026</td>
+</tr>
+</table>
+
+<hr>
+
+<table>
+<tr>
+<td width="3%">૧</td>
+<td width="30%">અરજદારનું નામ :-</td>
+<td>{row.get("Name Of Applicant","")}</td>
+</tr>
+
+<tr>
+<td>૨</td>
+<td>અરજદારનું સરનામું :-</td>
+<td>{row.get("Address1","")} {row.get("Address2","")}, 
+{row.get("District","")} {row.get("Taluka","")} {row.get("Village Or City","")}</td>
+</tr>
+
+<tr>
+<td>૩</td>
+<td>ફોન નંબર :-</td>
+<td>{row.get("Address2","")} &nbsp;&nbsp;&nbsp; 
+<b>SR No.</b> {row.get("SR Number","")}</td>
+</tr>
+
+<tr>
+<td>૪</td>
+<td>વપરાશનો હેતુ :-</td>
+<td>{row.get("Consumer Category","")} &nbsp;&nbsp; 
+{row.get("SR Type","")} &nbsp;&nbsp; 
+{row.get("Demand Load","")} {row.get("Load Uom","")}</td>
+</tr>
+
+<tr>
+<td>૫</td>
+<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર :-</td>
+<td>{row.get("RC Charge","")} &nbsp;&nbsp; 
+{row.get("RC MR NO","")} &nbsp;&nbsp; 
+તારીખ:- {row.get("RC Date","")}</td>
+</tr>
+</table>
+
 <br>
-<div class="sketch"></div>
-<br>
-Signature: __________________
+
+<div class="section">સર્વેની વિગતો :-</div>
+<hr>
+
+<table>
+<tr>
+<td>૬</td>
+<td>બાજુવાળાનો ગ્રાહક નંબર :</td>
+<td><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૭</td>
+<td>૧. ફીડરનું નામ :-</td>
+<td><span class="line"></span></td>
+<td>ફીડરનું કેટેગરી :-</td>
+<td><span class="line"></span></td>
+</tr>
+
+<tr>
+<td></td>
+<td>૨. ટ્રાન્સફરનું નામ :-</td>
+<td><span class="line"></span></td>
+<td>DTR કપકીટી :-</td>
+<td><span class="line"></span></td>
+</tr>
+
+<tr>
+<td></td>
+<td>૩. એલ ટી પોલ નંબર :-</td>
+<td><span class="line"></span></td>
+<td>જીઓ સર્વે (હા/ના)?</td>
+<td><span class="line"></span></td>
+</tr>
+
+<tr>
+<td></td>
+<td>૪. મકાન ઉપરથી કે નજીકથી એચ.ટી/એલ.ટી લાઇન પસાર થાય છે કે કેમ?</td>
+<td colspan="3"><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૮</td>
+<td>સદર મકાન કેટલા માળનું છે. :-</td>
+<td><span class="line"></span></td>
+<td>મકાન કાચું છે કે પાકું? :-</td>
+<td><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૯</td>
+<td>સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે કે કેમ? :-</td>
+<td colspan="3"><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૧૦</td>
+<td>અન્ય વિજ જોડાણ હોય તો તેની વિગત :-</td>
+<td colspan="3"><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૧૨</td>
+<td>ગામતળ માં છે કે સિમતલ માં છે? :-</td>
+<td colspan="3"><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૧૩</td>
+<td>સર્વે કેટેગરી (A/B/C/D) :-</td>
+<td><span class="line"></span></td>
+<td>પોલ થી મકાન નું અંતર :-</td>
+<td><span class="line"></span></td>
+</tr>
+
+<tr>
+<td>૧૪</td>
+<td>નકશો તથા અન્ય વિગતો નીચે બતાવી :-</td>
+<td colspan="3"><div style="height:120px;border:1px solid black;"></div></td>
+</tr>
+</table>
+
+<br><br>
+
+<b>Exist. Cons. No. (For LE):</b> _____________________
+
+<br><br><br>
+
+Signature: ___________________________
+
 </body>
 </html>
 """
     return base64.b64encode(html.encode()).decode()
-
 # =====================================================
 # AGGRID DISPLAY FUNCTION (NO COLOR CODING)
 # =====================================================
