@@ -232,7 +232,7 @@ DTR કપકીટી :- ______
 <tr>
 <td>10</td>
 <td colspan="2">
-વીજ જોડાણ મંગેલ મકાનમાં અન્ય વિજ જોડાણ હોય તો તેની વિગત (હેતુ સાથે) :-
+વીજ જોડાણ મંગેલ મકાનમાં અન્ય વિજ જોડાણ હોય તો તેની વિગત :-
 <span class="line"></span>
 </td>
 </tr>
@@ -289,6 +289,7 @@ Exist. Cons. No. (For LE) :- {row.get("Consumer No","")}
 """
 
     return base64.b64encode(html.encode("utf-8")).decode()
+
 # -----------------------------------------------------------
 # GRID DISPLAY
 # -----------------------------------------------------------
@@ -357,13 +358,15 @@ file = st.file_uploader("Upload Excel / CSV", type=["xlsx","csv"])
 
 if file:
 
-    if file.name.endswith("csv"):
-        df = pd.read_csv(file)
-    else:
-        df = pd.read_excel(file)
+    with st.spinner("Processing data..."):
+
+        if file.name.endswith("csv"):
+            df = pd.read_csv(file)
+        else:
+            df = pd.read_excel(file)
 
     # -------------------------------------------------------
-    # Sidebar Filters
+    # SIDEBAR FILTERS
     # -------------------------------------------------------
 
     st.sidebar.title("Filters")
@@ -373,28 +376,37 @@ if file:
 
     if scheme_filter != "All":
         df = df[df["Name Of Scheme"] == scheme_filter]
+        st.info(f"Showing data for scheme: **{scheme_filter}**")
+
+    # SR TYPE MULTI FILTER
+    sr_types = sorted(df["SR Type"].dropna().unique())
+    selected_sr = st.sidebar.multiselect("Select SR Type", sr_types, default=sr_types)
+
+    df = df[df["SR Type"].isin(selected_sr)]
 
     # -------------------------------------------------------
-    # Search
+    # SEARCH
     # -------------------------------------------------------
 
     search = st.text_input("🔎 Search SR Number")
 
     if search:
-        df = df[df["SR Number"].astype(str).str.contains(search)]
+        df = df[df["SR Number"].astype(str).str.contains(search, case=False, na=False)]
 
     # -------------------------------------------------------
-    # Date Conversion
+    # DATE CONVERSION
     # -------------------------------------------------------
 
-    for col in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
+    date_cols = ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]
+
+    for col in date_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
     today = pd.Timestamp.today()
 
     # -------------------------------------------------------
-    # Stage Logic (UNCHANGED)
+    # STAGE LOGIC
     # -------------------------------------------------------
 
     df1 = df[(df["Survey Category"].isna()) & (df["SR Status"]=="OPEN")].copy()
@@ -412,18 +424,18 @@ if file:
     df3["Aging Days"] = (today - df3["Date Of Est Appr Launch"]).dt.days
 
     # -------------------------------------------------------
-    # Summary Cards
+    # SUMMARY METRICS
     # -------------------------------------------------------
 
     col1,col2,col3,col4 = st.columns(4)
 
-    col1.metric("Survey Pending", len(df1))
-    col2.metric("Estimate Pending", len(df2))
-    col3.metric("FQ Pending", len(df3))
-    col4.metric("Total SR", len(df1)+len(df2)+len(df3))
+    col1.metric("📝 Survey Pending", len(df1))
+    col2.metric("📐 Estimate Pending", len(df2))
+    col3.metric("💰 FQ Pending", len(df3))
+    col4.metric("📊 Total SR", len(df1)+len(df2)+len(df3))
 
     # -------------------------------------------------------
-    # >30 Days Warning
+    # OLD CASE WARNING
     # -------------------------------------------------------
 
     old_cases = pd.concat([df1,df2,df3])
@@ -433,17 +445,17 @@ if file:
         st.warning(f"⚠ {len(old_cases)} cases older than 30 days")
 
     # -------------------------------------------------------
-    # Download Button
+    # DOWNLOAD FULL REPORT
     # -------------------------------------------------------
 
     st.download_button(
         "⬇ Download Full Report",
-        df.to_csv(index=False),
-        file_name="SR_Report.csv"
+        df.to_excel(index=False),
+        file_name="SR_Report.xlsx"
     )
 
     # -------------------------------------------------------
-    # Tabs
+    # TABS
     # -------------------------------------------------------
 
     tab1,tab2,tab3 = st.tabs([
@@ -453,14 +465,35 @@ if file:
     ])
 
     with tab1:
+
+        st.download_button(
+            "Download Survey Pending",
+            df1.to_excel(index=False),
+            "survey_pending.xlsx"
+        )
+
         df1.insert(0,"Sr No",range(1,len(df1)+1))
         display_grid(df1,print_enable=True)
 
     with tab2:
+
+        st.download_button(
+            "Download Estimate Pending",
+            df2.to_excel(index=False),
+            "estimate_pending.xlsx"
+        )
+
         df2.insert(0,"Sr No",range(1,len(df2)+1))
         display_grid(df2)
 
     with tab3:
+
+        st.download_button(
+            "Download FQ Pending",
+            df3.to_excel(index=False),
+            "fq_pending.xlsx"
+        )
+
         df3.insert(0,"Sr No",range(1,len(df3)+1))
         display_grid(df3)
 
