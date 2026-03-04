@@ -25,30 +25,31 @@ def create_print_html(row):
 
 @page {{
 size:A4;
-margin:20mm;
+margin:8mm;
 }}
 
 body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
-font-size:14px;
+font-size:13px;
+margin:0;
 }}
 
 .header {{
 text-align:center;
-font-size:20px;
+font-size:18px;
 font-weight:bold;
 }}
 
 .subheader {{
 text-align:center;
+margin-bottom:5px;
 }}
 
 .title {{
 text-align:center;
-font-size:18px;
+font-size:16px;
 font-weight:bold;
-text-decoration:underline;
-margin:10px 0;
+margin-bottom:6px;
 }}
 
 table {{
@@ -57,12 +58,24 @@ border-collapse:collapse;
 }}
 
 td {{
-border:1px solid black;
-padding:6px;
+padding:4px;
+vertical-align:top;
+}}
+
+.line {{
+border-bottom:1px solid black;
+display:inline-block;
+width:100%;
 }}
 
 .sketch {{
-height:220px;
+height:200px;
+border:1px solid black;
+}}
+
+.signature td {{
+text-align:center;
+padding-top:30px;
 }}
 
 </style>
@@ -73,14 +86,16 @@ height:220px;
 
 <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
 <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
+
 <div class="title">Survey Form</div>
 
 <table>
+
 <tr>
-<td>તારીખ :</td>
-<td></td>
-<td style="text-align:right;">{row.get("Name Of Scheme","")}</td>
+<td>તારીખ:- ________________________</td>
+<td style="text-align:right">GP No. ______ &nbsp;&nbsp; 2026</td>
 </tr>
+
 </table>
 
 <br>
@@ -88,15 +103,15 @@ height:220px;
 <table>
 
 <tr>
-<td width="5%">૧</td>
-<td width="30%">અરજદારનું નામ</td>
-<td>{row.get("Name Of Applicant","")}</td>
+<td width="4%">1</td>
+<td width="28%">અરજદારનું નામ :-</td>
+<td class="line">{row.get("Name Of Applicant","")}</td>
 </tr>
 
 <tr>
-<td>૨</td>
-<td>અરજદારનું સરનામું</td>
-<td>
+<td>2</td>
+<td>અરજદારનું સરનામું :-</td>
+<td class="line">
 {row.get("Address1","")} {row.get("Address2","")},
 {row.get("Village Or City","")},
 {row.get("Taluka","")},
@@ -105,15 +120,17 @@ height:220px;
 </tr>
 
 <tr>
-<td>૩</td>
-<td>ફોન નંબર</td>
-<td>{row.get("Address2","")} &nbsp;&nbsp; SR No: {row.get("SR Number","")}</td>
+<td>3</td>
+<td>ફોન નંબર :-</td>
+<td>
+{row.get("Address2","")} &nbsp;&nbsp;&nbsp; SR No. {row.get("SR Number","")}
+</td>
 </tr>
 
 <tr>
-<td>૪</td>
-<td>વપરાશનો હેતુ</td>
-<td>
+<td>4</td>
+<td>વપરાશનો હેતુ :-</td>
+<td class="line">
 {row.get("Consumer Category","")} |
 {row.get("SR Type","")} |
 {row.get("Demand Load","")} {row.get("Load Uom","")}
@@ -121,73 +138,146 @@ height:220px;
 </tr>
 
 <tr>
-<td>૫</td>
-<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
+<td>5</td>
+<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર :-</td>
 <td>
 {row.get("RC Charge","")} |
-{row.get("RC MR NO","")} |
-{row.get("RC Date","")}
+{row.get("RC MR NO","")} &nbsp;&nbsp; તારીખ:- {row.get("RC Date","")}
+</td>
+</tr>
+
+</table>
+
+<br>
+
+<b>સર્વેની વિગતો :-</b>
+
+<table>
+
+<tr>
+<td width="4%">6</td>
+<td>બાજુવાળાનો ગ્રાહક નંબર :</td>
+<td class="line"></td>
+</tr>
+
+<tr>
+<td>7</td>
+<td>
+1. ફીડરનું નામ :- <span class="line" style="width:200px"></span>
+</td>
+<td>
+ફીડરનું કેટેગરી :- ______
 </td>
 </tr>
 
 <tr>
-<td>૬</td>
-<td>બાજુવાળાનો ગ્રાહક નંબર</td>
 <td></td>
+<td>
+2. ટ્રાન્સફરનું નામ :- <span class="line" style="width:200px"></span>
+</td>
+<td>
+DTR કપકીટી :- ______
+</td>
 </tr>
 
 <tr>
-<td>૭</td>
-<td>સર્વે કેટેગરી</td>
-<td>{row.get("Survey Category","")}</td>
-</tr>
-
-<tr>
-<td>૮</td>
-<td>ફીડર / ટ્રાન્સફર / પોલ વિગત</td>
 <td></td>
+<td>
+3. એલ ટી પોલ નંબર :- <span class="line" style="width:200px"></span>
+</td>
+<td>
+જીઓ સર્વે (હા/ના)? ______
+</td>
 </tr>
 
 <tr>
-<td>૯</td>
-<td>મકાન વિગત</td>
 <td></td>
+<td colspan="2">
+4. મકાન ઉપરથી કે નજીકથી એચ.ટી/એલ.ટી લાઇન પસાર થાય છે કે કેમ ? :-
+<span class="line"></span>
+</td>
 </tr>
 
 <tr>
-<td>૧૦</td>
-<td>અન્ય વિજ જોડાણ વિગત</td>
+<td>8</td>
+<td>
+સદર મકાન કેટલા માળનું છે. :-
+<span class="line"></span>
+</td>
+
+<td>
+વીજ જોડાણ મંગેલ મકાન કાચું છે પાકું? :- ______
+</td>
+</tr>
+
+<tr>
+<td>9</td>
+<td colspan="2">
+સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે કે કેમ ? :-
+<span class="line"></span>
+</td>
+</tr>
+
+<tr>
+<td>10</td>
+<td colspan="2">
+વીજ જોડાણ મંગેલ મકાનમાં અન્ય વિજ જોડાણ હોય તો તેની વિગત (હેતુ સાથે) :-
+<span class="line"></span>
+</td>
+</tr>
+
+<tr>
+<td>12</td>
+<td colspan="2">
+વીજ જોડાણ મંગેલ સ્થળ ગામતળ માં છે કે સિમતલ માં છે? :-
+<span class="line"></span>
+</td>
+</tr>
+
+<tr>
+<td>13</td>
+<td>
+સર્વે કેટેગરી (A/B/C/D) :- <span class="line" style="width:120px"></span>
+</td>
+<td>
+પોલ થી મકાન નું અંતર :- ______
+</td>
+</tr>
+
+<tr>
+<td>14</td>
+<td colspan="2">
+નકશો તથા અન્ય વિગતો નીચે બતાવી :- <br>
+<div class="sketch"></div>
+</td>
+</tr>
+
+<tr>
 <td></td>
-</tr>
-
-<tr>
-<td>૧૧</td>
-<td>ગામતળ / સિમતલ</td>
-<td></td>
-</tr>
-
-<tr>
-<td>૧૨</td>
-<td>Exist. Cons. No. (For LE)</td>
-<td>{row.get("Consumer No","")}</td>
-</tr>
-
-<tr>
-<td>૧૩</td>
-<td colspan="2" class="sketch"></td>
+<td colspan="2">
+Exist. Cons. No. (For LE) :- {row.get("Consumer No","")}
+</td>
 </tr>
 
 </table>
 
 <br><br>
-Signature : _______________________
+
+<table class="signature">
+
+<tr>
+<td>અરજદાર / પ્રતિનિધિની સહી.</td>
+<td>સર્વે કરનારનું / સહી<br>નામ<br>હોદ્દો</td>
+<td>જુ.ઇ. ની સહી</td>
+</tr>
+
+</table>
 
 </body>
 </html>
 """
 
     return base64.b64encode(html.encode("utf-8")).decode()
-
 # --------------------------------------------------
 # AgGrid Display
 # --------------------------------------------------
