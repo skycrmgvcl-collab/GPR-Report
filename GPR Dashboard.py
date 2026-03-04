@@ -9,18 +9,9 @@ st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
 st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
-# -------------------------------------------------------
-# Load logo safely
-# -------------------------------------------------------
-
-LOGO_BASE64 = ""
-if os.path.exists("mgvcl_logo.png"):
-    with open("mgvcl_logo.png", "rb") as f:
-        LOGO_BASE64 = base64.b64encode(f.read()).decode()
-
-# -------------------------------------------------------
+# --------------------------------------------------
 # Survey Form HTML
-# -------------------------------------------------------
+# --------------------------------------------------
 
 def create_print_html(row):
 
@@ -32,21 +23,24 @@ def create_print_html(row):
 
 <style>
 
+@page {{
+size:A4;
+margin:20mm;
+}}
+
 body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
 font-size:14px;
-padding:20px;
 }}
 
 .header {{
 text-align:center;
-font-weight:bold;
 font-size:20px;
+font-weight:bold;
 }}
 
 .subheader {{
 text-align:center;
-margin-bottom:10px;
 }}
 
 .title {{
@@ -54,7 +48,7 @@ text-align:center;
 font-size:18px;
 font-weight:bold;
 text-decoration:underline;
-margin-bottom:10px;
+margin:10px 0;
 }}
 
 table {{
@@ -67,11 +61,12 @@ border:1px solid black;
 padding:6px;
 }}
 
-.blank {{
-height:120px;
+.sketch {{
+height:220px;
 }}
 
 </style>
+
 </head>
 
 <body onload="window.print()">
@@ -94,14 +89,19 @@ height:120px;
 
 <tr>
 <td width="5%">૧</td>
-<td width="35%">અરજદારનું નામ</td>
+<td width="30%">અરજદારનું નામ</td>
 <td>{row.get("Name Of Applicant","")}</td>
 </tr>
 
 <tr>
 <td>૨</td>
 <td>અરજદારનું સરનામું</td>
-<td>{row.get("Address1","")} {row.get("Address2","")}, {row.get("Village Or City","")}, {row.get("Taluka","")}, {row.get("District","")}</td>
+<td>
+{row.get("Address1","")} {row.get("Address2","")},
+{row.get("Village Or City","")},
+{row.get("Taluka","")},
+{row.get("District","")}
+</td>
 </tr>
 
 <tr>
@@ -113,13 +113,21 @@ height:120px;
 <tr>
 <td>૪</td>
 <td>વપરાશનો હેતુ</td>
-<td>{row.get("Consumer Category","")} | {row.get("SR Type","")} | {row.get("Demand Load","")} {row.get("Load Uom","")}</td>
+<td>
+{row.get("Consumer Category","")} |
+{row.get("SR Type","")} |
+{row.get("Demand Load","")} {row.get("Load Uom","")}
+</td>
 </tr>
 
 <tr>
 <td>૫</td>
 <td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
-<td>{row.get("RC Charge","")} | {row.get("RC MR NO","")} | {row.get("RC Date","")}</td>
+<td>
+{row.get("RC Charge","")} |
+{row.get("RC MR NO","")} |
+{row.get("RC Date","")}
+</td>
 </tr>
 
 <tr>
@@ -166,7 +174,7 @@ height:120px;
 
 <tr>
 <td>૧૩</td>
-<td colspan="2" class="blank"></td>
+<td colspan="2" class="sketch"></td>
 </tr>
 
 </table>
@@ -180,9 +188,9 @@ Signature : _______________________
 
     return base64.b64encode(html.encode("utf-8")).decode()
 
-# -------------------------------------------------------
-# Grid Function
-# -------------------------------------------------------
+# --------------------------------------------------
+# AgGrid Display
+# --------------------------------------------------
 
 def display_grid(df, print_enable=False):
 
@@ -203,7 +211,10 @@ this.eGui.addEventListener('click',()=>{
 
 const win=window.open("","_blank");
 
-const html=atob(params.data.print_data);
+// decode base64 to UTF8
+const b64=params.data.print_data;
+const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+const html=new TextDecoder("utf-8").decode(bytes);
 
 win.document.open();
 win.document.write(html);
@@ -231,17 +242,30 @@ getGui(){return this.eGui;}
         gb.configure_column("Print", cellRenderer=renderer, width=70)
         gb.configure_column("print_data", hide=True)
 
+    # Aging highlight
+    gb.configure_column(
+        "Aging Days",
+        cellStyle=JsCode("""
+        function(params){
+        if(params.value>30){
+        return {'color':'white','backgroundColor':'red'}
+        }
+        }
+        """)
+    )
+
     AgGrid(
         df,
         gridOptions=gb.build(),
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
-        height=500
+        height=500,
+        theme="streamlit"
     )
 
-# -------------------------------------------------------
-# Upload File
-# -------------------------------------------------------
+# --------------------------------------------------
+# File Upload
+# --------------------------------------------------
 
 file = st.file_uploader("Upload Excel / CSV", type=["xlsx","csv"])
 
@@ -252,17 +276,17 @@ if file:
     else:
         df = pd.read_excel(file)
 
-    # sidebar scheme filter
+    # Scheme Filter
     scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
     scheme_filter = st.sidebar.selectbox("Scheme Filter", ["All"] + scheme_list)
 
     if scheme_filter != "All":
         df = df[df["Name Of Scheme"] == scheme_filter]
 
-    # date conversion
-    for c in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
-        if c in df.columns:
-            df[c] = pd.to_datetime(df[c], errors="coerce")
+    # Date conversion
+    for col in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
 
     today = pd.Timestamp.today()
 
@@ -283,18 +307,39 @@ if file:
              (df["SR Status"]=="OPEN")].copy()
     df3["Aging Days"] = (today - df3["Date Of Est Appr Launch"]).dt.days
 
-    tab1, tab2, tab3 = st.tabs(["Unsurvey Applications","Estimate Pending","FQ Issue Pending"])
+    tab1,tab2,tab3 = st.tabs(["Unsurvey Applications","Estimate Pending","FQ Issue Pending"])
 
     with tab1:
-        df1.insert(0,"Sr No", range(1,len(df1)+1))
-        display_grid(df1, print_enable=True)
+
+        st.download_button(
+            "⬇ Download Excel",
+            df1.to_csv(index=False),
+            file_name="survey_pending.csv"
+        )
+
+        df1.insert(0,"Sr No",range(1,len(df1)+1))
+        display_grid(df1,print_enable=True)
 
     with tab2:
-        df2.insert(0,"Sr No", range(1,len(df2)+1))
+
+        st.download_button(
+            "⬇ Download Excel",
+            df2.to_csv(index=False),
+            file_name="estimate_pending.csv"
+        )
+
+        df2.insert(0,"Sr No",range(1,len(df2)+1))
         display_grid(df2)
 
     with tab3:
-        df3.insert(0,"Sr No", range(1,len(df3)+1))
+
+        st.download_button(
+            "⬇ Download Excel",
+            df3.to_csv(index=False),
+            file_name="fq_pending.csv"
+        )
+
+        df3.insert(0,"Sr No",range(1,len(df3)+1))
         display_grid(df3)
 
 else:
