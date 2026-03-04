@@ -31,31 +31,32 @@ def create_print_html(row):
 
 @page {{
 size:A4;
-margin:8mm;
+margin:5mm;
 }}
 
 body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
-font-size:13px;
+font-size:12px;
 margin:0;
+height:297mm;
 }}
 
 .header {{
 text-align:center;
-font-size:18px;
+font-size:16px;
 font-weight:bold;
 }}
 
 .subheader {{
 text-align:center;
-margin-bottom:5px;
+margin-bottom:3px;
 }}
 
 .title {{
 text-align:center;
-font-size:16px;
+font-size:14px;
 font-weight:bold;
-margin-bottom:6px;
+margin-bottom:4px;
 }}
 
 table {{
@@ -64,7 +65,7 @@ border-collapse:collapse;
 }}
 
 td {{
-padding:4px;
+padding:2px 4px;
 vertical-align:top;
 }}
 
@@ -75,19 +76,23 @@ width:100%;
 }}
 
 .sketch {{
-height:320px;
+height:180px;
 border:1px solid black;
-margin-top:6px;
+margin-top:3px;
 }}
 
 .signature td {{
 text-align:center;
-padding-top:30px;
+padding-top:20px;
 }}
 
 .srno {{
 font-weight:bold;
-font-size:16px;
+font-size:15px;
+}}
+
+.no-break {{
+page-break-inside:avoid;
 }}
 
 </style>
@@ -102,15 +107,17 @@ font-size:16px;
 <div class="title">Survey Form</div>
 
 <table>
+
 <tr>
-<td>તારીખ:- ________________________</td>
-<td style="text-align:right">GP No. ______ &nbsp;&nbsp; 2026</td>
+<td>તારીખ:- __________________</td>
+<td style="text-align:right">GP No. ______ &nbsp; 2026</td>
 </tr>
+
 </table>
 
 <br>
 
-<table>
+<table class="no-break">
 
 <tr>
 <td width="4%">1</td>
@@ -133,7 +140,8 @@ font-size:16px;
 <td>3</td>
 <td>ફોન નંબર :-</td>
 <td>
-{row.get("Address2","")} &nbsp;&nbsp;&nbsp;
+{row.get("Address2","")}
+&nbsp;&nbsp;
 <span class="srno">SR No : {row.get("SR Number","")}</span>
 </td>
 </tr>
@@ -153,7 +161,8 @@ font-size:16px;
 <td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર :-</td>
 <td>
 {row.get("RC Charge","")} |
-{row.get("RC MR NO","")} &nbsp;&nbsp; તારીખ:- {row.get("RC Date","")}
+{row.get("RC MR NO","")}
+&nbsp;&nbsp; તારીખ:- {row.get("RC Date","")}
 </td>
 </tr>
 
@@ -163,7 +172,7 @@ font-size:16px;
 
 <b>સર્વેની વિગતો :-</b>
 
-<table>
+<table class="no-break">
 
 <tr>
 <td width="4%">6</td>
@@ -173,20 +182,32 @@ font-size:16px;
 
 <tr>
 <td>7</td>
-<td>1. ફીડરનું નામ :- <span class="line" style="width:250px"></span></td>
-<td>ફીડરનું કેટેગરી :- ______</td>
+<td>
+1. ફીડરનું નામ :- <span class="line" style="width:220px"></span>
+</td>
+<td>
+ફીડર કેટેગરી :- ______
+</td>
 </tr>
 
 <tr>
 <td></td>
-<td>2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:250px"></span></td>
-<td>DTR કેપેસીટી :- ______</td>
+<td>
+2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:220px"></span>
+</td>
+<td>
+ટ્રાન્સફોર્મર કેપેસીટી :- ______
+</td>
 </tr>
 
 <tr>
 <td></td>
-<td>3. એલ ટી પોલ નંબર :- <span class="line" style="width:250px"></span></td>
-<td>જીઓ સર્વે (હા/ના)? ______</td>
+<td>
+3. એલ ટી પોલ નંબર :- <span class="line" style="width:220px"></span>
+</td>
+<td>
+જીઓ સર્વે (હા/ના)? ______
+</td>
 </tr>
 
 <tr>
@@ -256,9 +277,9 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 
 </table>
 
-<br><br>
+<br>
 
-<table class="signature">
+<table class="signature no-break">
 
 <tr>
 <td>અરજદાર / પ્રતિનિધિની સહી</td>
@@ -273,67 +294,6 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 """
 
     return base64.b64encode(html.encode("utf-8")).decode()
-
-# -----------------------------------------------------------
-# GRID FUNCTION
-# -----------------------------------------------------------
-
-def display_grid(df, print_enable=False):
-
-    df=df.copy()
-
-    if print_enable:
-        df["print_data"]=df.apply(create_print_html,axis=1)
-        df.insert(1,"Print","")
-
-    renderer=JsCode("""
-class Renderer{
-init(params){
-this.eGui=document.createElement('span');
-this.eGui.innerHTML='🖨';
-this.eGui.style.cursor='pointer';
-
-this.eGui.addEventListener('click',()=>{
-
-const win=window.open("","_blank");
-
-const b64=params.data.print_data;
-const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-const html=new TextDecoder("utf-8").decode(bytes);
-
-win.document.open();
-win.document.write(html);
-win.document.close();
-
-});
-
-}
-getGui(){return this.eGui;}
-}
-""")
-
-    gb=GridOptionsBuilder.from_dataframe(df)
-
-    gb.configure_default_column(
-        filter=True,
-        sortable=True,
-        resizable=True,
-        flex=1,
-        minWidth=120
-    )
-
-    if print_enable:
-        gb.configure_column("Print",cellRenderer=renderer,width=70)
-        gb.configure_column("print_data",hide=True)
-
-    AgGrid(
-        df,
-        gridOptions=gb.build(),
-        allow_unsafe_jscode=True,
-        fit_columns_on_grid_load=True,
-        height=min(650,120+len(df)*30)
-    )
-
 # -----------------------------------------------------------
 # FILE UPLOAD
 # -----------------------------------------------------------
