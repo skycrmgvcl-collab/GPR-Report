@@ -75,9 +75,9 @@ width:100%;
 }}
 
 .sketch {{
-height:300px;
+height:320px;
 border:1px solid black;
-margin-top:5px;
+margin-top:6px;
 }}
 
 .signature td {{
@@ -133,13 +133,8 @@ font-size:16px;
 <td>3</td>
 <td>ફોન નંબર :-</td>
 <td>
-
-{row.get("Address2","")}
-
-&nbsp;&nbsp;&nbsp;
-
+{row.get("Address2","")} &nbsp;&nbsp;&nbsp;
 <span class="srno">SR No : {row.get("SR Number","")}</span>
-
 </td>
 </tr>
 
@@ -178,38 +173,26 @@ font-size:16px;
 
 <tr>
 <td>7</td>
-<td>
-1. ફીડરનું નામ :- <span class="line" style="width:250px"></span>
-</td>
-<td>
-ફીડરનું કેટેગરી :- ______
-</td>
+<td>1. ફીડરનું નામ :- <span class="line" style="width:250px"></span></td>
+<td>ફીડરનું કેટેગરી :- ______</td>
 </tr>
 
 <tr>
 <td></td>
-<td>
-2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:250px"></span>
-</td>
-<td>
-DTR કેપેસીટી :- ______
-</td>
+<td>2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:250px"></span></td>
+<td>DTR કેપેસીટી :- ______</td>
 </tr>
 
 <tr>
 <td></td>
-<td>
-3. એલ ટી પોલ નંબર :- <span class="line" style="width:250px"></span>
-</td>
-<td>
-જીઓ સર્વે (હા/ના)? ______
-</td>
+<td>3. એલ ટી પોલ નંબર :- <span class="line" style="width:250px"></span></td>
+<td>જીઓ સર્વે (હા/ના)? ______</td>
 </tr>
 
 <tr>
 <td></td>
 <td colspan="2">
-4. મકાન ઉપરથી કે નજીકથી HT/LT લાઇન પસાર થાય છે કે કેમ ?
+4. મકાન ઉપરથી કે નજીકથી HT/LT લાઇન પસાર થાય છે ?
 <span class="line"></span>
 </td>
 </tr>
@@ -368,19 +351,29 @@ if file:
 
     st.sidebar.title("Filters")
 
-    # Scheme Selection
+    # Scheme selection
     schemes=sorted(df["Name Of Scheme"].dropna().unique())
-    selected_scheme=st.sidebar.pills("Select Scheme",schemes,selection_mode="multi")
 
-    if selected_scheme:
-        df=df[df["Name Of Scheme"].isin(selected_scheme)]
+    with st.sidebar.expander("Select Scheme",expanded=True):
 
-    # SR Type Selection
+        selected_scheme=[]
+        for s in schemes:
+            if st.checkbox(s,value=True,key=f"scheme_{s}"):
+                selected_scheme.append(s)
+
+    df=df[df["Name Of Scheme"].isin(selected_scheme)]
+
+    # SR Type selection
     sr_types=sorted(df["SR Type"].dropna().unique())
-    selected_sr=st.sidebar.pills("Select SR Type",sr_types,selection_mode="multi")
 
-    if selected_sr:
-        df=df[df["SR Type"].isin(selected_sr)]
+    with st.sidebar.expander("Select SR Type",expanded=True):
+
+        selected_sr=[]
+        for s in sr_types:
+            if st.checkbox(s,value=True,key=f"sr_{s}"):
+                selected_sr.append(s)
+
+    df=df[df["SR Type"].isin(selected_sr)]
 
     # Search
     search=st.text_input("🔎 Search SR Number")
@@ -413,18 +406,8 @@ if file:
 
     tab1,tab2,tab3=st.tabs(["📋 Survey Pending","📐 Estimate Pending","💰 FQ Pending"])
 
-    tab1_cols=[
-    "SR Number","SR Type","Name Of Applicant","Address1","Address2","District",
-    "Taluka","Village Or City","Consumer Category","Sub Category","Name Of Scheme",
-    "Demand Load","Load Uom","Tariff","RC Date","RC MR NO","RC Charge",
-    "Survey Category","SR Status","Rev Land Syrvey No"
-    ]
-
     with tab1:
-
-        df1=df1[tab1_cols]
         df1.insert(0,"Sr No",range(1,len(df1)+1))
-
         display_grid(df1,print_enable=True)
 
     with tab2:
