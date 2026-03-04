@@ -6,12 +6,6 @@ import io
 
 st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
 
-st.markdown("""
-<style>
-.block-container {padding-top:1rem;}
-</style>
-""", unsafe_allow_html=True)
-
 st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
@@ -38,7 +32,6 @@ body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
 font-size:12px;
 margin:0;
-height:297mm;
 }}
 
 .header {{
@@ -91,10 +84,6 @@ font-weight:bold;
 font-size:15px;
 }}
 
-.no-break {{
-page-break-inside:avoid;
-}}
-
 </style>
 
 </head>
@@ -110,14 +99,14 @@ page-break-inside:avoid;
 
 <tr>
 <td>તારીખ:- __________________</td>
-<td style="text-align:right">GP No. ______ &nbsp; 2026</td>
+<td style="text-align:right">GP No. ______ 2026</td>
 </tr>
 
 </table>
 
 <br>
 
-<table class="no-break">
+<table>
 
 <tr>
 <td width="4%">1</td>
@@ -172,7 +161,7 @@ page-break-inside:avoid;
 
 <b>સર્વેની વિગતો :-</b>
 
-<table class="no-break">
+<table>
 
 <tr>
 <td width="4%">6</td>
@@ -182,32 +171,20 @@ page-break-inside:avoid;
 
 <tr>
 <td>7</td>
-<td>
-1. ફીડરનું નામ :- <span class="line" style="width:220px"></span>
-</td>
-<td>
-ફીડર કેટેગરી :- ______
-</td>
+<td>1. ફીડરનું નામ :- <span class="line" style="width:220px"></span></td>
+<td>ફીડર કેટેગરી :- ______</td>
 </tr>
 
 <tr>
 <td></td>
-<td>
-2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:220px"></span>
-</td>
-<td>
-ટ્રાન્સફોર્મર કેપેસીટી :- ______
-</td>
+<td>2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:220px"></span></td>
+<td>ટ્રાન્સફોર્મર કેપેસીટી :- ______</td>
 </tr>
 
 <tr>
 <td></td>
-<td>
-3. એલ ટી પોલ નંબર :- <span class="line" style="width:220px"></span>
-</td>
-<td>
-જીઓ સર્વે (હા/ના)? ______
-</td>
+<td>3. એલ ટી પોલ નંબર :- <span class="line" style="width:220px"></span></td>
+<td>જીઓ સર્વે (હા/ના)? ______</td>
 </tr>
 
 <tr>
@@ -220,38 +197,23 @@ page-break-inside:avoid;
 
 <tr>
 <td>8</td>
-<td>
-સદર મકાન કેટલા માળનું છે :-
-<span class="line"></span>
-</td>
-
-<td>
-કાચું કે પાકું :- ______
-</td>
+<td>સદર મકાન કેટલા માળનું છે :- <span class="line"></span></td>
+<td>કાચું કે પાકું :- ______</td>
 </tr>
 
 <tr>
 <td>9</td>
-<td colspan="2">
-સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે ?
-<span class="line"></span>
-</td>
+<td colspan="2">સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે ? <span class="line"></span></td>
 </tr>
 
 <tr>
 <td>10</td>
-<td colspan="2">
-અન્ય વિજ જોડાણ હોય તો વિગત
-<span class="line"></span>
-</td>
+<td colspan="2">અન્ય વિજ જોડાણ હોય તો વિગત <span class="line"></span></td>
 </tr>
 
 <tr>
 <td>12</td>
-<td colspan="2">
-ગામતળ / સિમતળ
-<span class="line"></span>
-</td>
+<td colspan="2">ગામતળ / સિમતળ <span class="line"></span></td>
 </tr>
 
 <tr>
@@ -279,14 +241,12 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 
 <br>
 
-<table class="signature no-break">
-
+<table class="signature">
 <tr>
 <td>અરજદાર / પ્રતિનિધિની સહી</td>
 <td>સર્વે કરનાર</td>
 <td>જુ.ઇ. ની સહી</td>
 </tr>
-
 </table>
 
 </body>
@@ -294,6 +254,66 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 """
 
     return base64.b64encode(html.encode("utf-8")).decode()
+
+# -----------------------------------------------------------
+# GRID FUNCTION
+# -----------------------------------------------------------
+
+def display_grid(df, print_enable=False):
+
+    df=df.copy()
+
+    if print_enable:
+        df["print_data"]=df.apply(create_print_html,axis=1)
+        df.insert(1,"Print","")
+
+    renderer=JsCode("""
+class Renderer{
+init(params){
+this.eGui=document.createElement('span');
+this.eGui.innerHTML='🖨';
+this.eGui.style.cursor='pointer';
+
+this.eGui.addEventListener('click',()=>{
+
+const win=window.open("","_blank");
+
+const b64=params.data.print_data;
+const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+const html=new TextDecoder("utf-8").decode(bytes);
+
+win.document.open();
+win.document.write(html);
+win.document.close();
+
+});
+}
+getGui(){return this.eGui;}
+}
+""")
+
+    gb=GridOptionsBuilder.from_dataframe(df)
+
+    gb.configure_default_column(
+        filter=True,
+        sortable=True,
+        resizable=True,
+        flex=1,
+        minWidth=120
+    )
+
+    if print_enable:
+        gb.configure_column("Print",cellRenderer=renderer,width=70)
+        gb.configure_column("print_data",hide=True)
+
+    AgGrid(
+        df,
+        gridOptions=gb.build(),
+        allow_unsafe_jscode=True,
+        fit_columns_on_grid_load=True,
+        height=min(650,120+len(df)*30)
+    )
+
 # -----------------------------------------------------------
 # FILE UPLOAD
 # -----------------------------------------------------------
@@ -302,46 +322,35 @@ file=st.file_uploader("Upload Excel / CSV",type=["xlsx","csv"])
 
 if file:
 
-    if file.name.endswith("csv"):
-        df=pd.read_csv(file)
-    else:
-        df=pd.read_excel(file)
+    df=pd.read_csv(file) if file.name.endswith("csv") else pd.read_excel(file)
 
     df=df[df["SR Status"].str.upper()!="CLOSED"]
 
     st.sidebar.title("Filters")
 
-    # Scheme selection
     schemes=sorted(df["Name Of Scheme"].dropna().unique())
 
-    with st.sidebar.expander("Select Scheme",expanded=True):
-
-        selected_scheme=[]
-        for s in schemes:
-            if st.checkbox(s,value=True,key=f"scheme_{s}"):
-                selected_scheme.append(s)
+    selected_scheme=[]
+    for s in schemes:
+        if st.sidebar.checkbox(s,True):
+            selected_scheme.append(s)
 
     df=df[df["Name Of Scheme"].isin(selected_scheme)]
 
-    # SR Type selection
     sr_types=sorted(df["SR Type"].dropna().unique())
 
-    with st.sidebar.expander("Select SR Type",expanded=True):
-
-        selected_sr=[]
-        for s in sr_types:
-            if st.checkbox(s,value=True,key=f"sr_{s}"):
-                selected_sr.append(s)
+    selected_sr=[]
+    for s in sr_types:
+        if st.sidebar.checkbox(s,True,key=s):
+            selected_sr.append(s)
 
     df=df[df["SR Type"].isin(selected_sr)]
 
-    # Search
     search=st.text_input("🔎 Search SR Number")
 
     if search:
-        df=df[df["SR Number"].astype(str).str.contains(search,case=False,na=False)]
+        df=df[df["SR Number"].astype(str).str.contains(search,case=False)]
 
-    # Date conversion
     for col in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
         if col in df.columns:
             df[col]=pd.to_datetime(df[col],errors="coerce")
@@ -359,23 +368,41 @@ if file:
 
     col1,col2,col3,col4=st.columns(4)
 
-    col1.metric("📝 Survey Pending",len(df1))
-    col2.metric("📐 Estimate Pending",len(df2))
-    col3.metric("💰 FQ Pending",len(df3))
-    col4.metric("📊 Total SR",len(df1)+len(df2)+len(df3))
+    col1.metric("Survey Pending",len(df1))
+    col2.metric("Estimate Pending",len(df2))
+    col3.metric("FQ Pending",len(df3))
+    col4.metric("Total SR",len(df1)+len(df2)+len(df3))
 
-    tab1,tab2,tab3=st.tabs(["📋 Survey Pending","📐 Estimate Pending","💰 FQ Pending"])
+    tab1,tab2,tab3=st.tabs(["Survey Pending","Estimate Pending","FQ Pending"])
 
     with tab1:
+
         df1.insert(0,"Sr No",range(1,len(df1)+1))
+
+        buffer=io.BytesIO()
+        df1.to_excel(buffer,index=False)
+        st.download_button("⬇ Export Survey Pending",buffer.getvalue(),"SurveyPending.xlsx")
+
         display_grid(df1,print_enable=True)
 
     with tab2:
+
         df2.insert(0,"Sr No",range(1,len(df2)+1))
+
+        buffer=io.BytesIO()
+        df2.to_excel(buffer,index=False)
+        st.download_button("⬇ Export Estimate Pending",buffer.getvalue(),"EstimatePending.xlsx")
+
         display_grid(df2)
 
     with tab3:
+
         df3.insert(0,"Sr No",range(1,len(df3)+1))
+
+        buffer=io.BytesIO()
+        df3.to_excel(buffer,index=False)
+        st.download_button("⬇ Export FQ Pending",buffer.getvalue(),"FQPending.xlsx")
+
         display_grid(df3)
 
 else:
