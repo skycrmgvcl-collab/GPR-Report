@@ -16,7 +16,7 @@ st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
 # -----------------------------------------------------------
-# SURVEY FORM  (UNCHANGED FROM YOUR PROGRAM)
+# SURVEY FORM
 # -----------------------------------------------------------
 
 def create_print_html(row):
@@ -75,13 +75,19 @@ width:100%;
 }}
 
 .sketch {{
-height:200px;
+height:300px;
 border:1px solid black;
+margin-top:5px;
 }}
 
 .signature td {{
 text-align:center;
 padding-top:30px;
+}}
+
+.srno {{
+font-weight:bold;
+font-size:16px;
 }}
 
 </style>
@@ -96,12 +102,10 @@ padding-top:30px;
 <div class="title">Survey Form</div>
 
 <table>
-
 <tr>
 <td>તારીખ:- ________________________</td>
 <td style="text-align:right">GP No. ______ &nbsp;&nbsp; 2026</td>
 </tr>
-
 </table>
 
 <br>
@@ -129,7 +133,13 @@ padding-top:30px;
 <td>3</td>
 <td>ફોન નંબર :-</td>
 <td>
-{row.get("Address2","")} &nbsp;&nbsp;&nbsp; SR No. {row.get("SR Number","")}
+
+{row.get("Address2","")}
+
+&nbsp;&nbsp;&nbsp;
+
+<span class="srno">SR No : {row.get("SR Number","")}</span>
+
 </td>
 </tr>
 
@@ -169,7 +179,7 @@ padding-top:30px;
 <tr>
 <td>7</td>
 <td>
-1. ફીડરનું નામ :- <span class="line" style="width:200px"></span>
+1. ફીડરનું નામ :- <span class="line" style="width:250px"></span>
 </td>
 <td>
 ફીડરનું કેટેગરી :- ______
@@ -179,17 +189,17 @@ padding-top:30px;
 <tr>
 <td></td>
 <td>
-2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:200px"></span>
+2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:250px"></span>
 </td>
 <td>
-ટ્રાન્સફોર્મર કેપેસીટી :- ______
+DTR કેપેસીટી :- ______
 </td>
 </tr>
 
 <tr>
 <td></td>
 <td>
-3. એલ ટી પોલ નંબર :- <span class="line" style="width:200px"></span>
+3. એલ ટી પોલ નંબર :- <span class="line" style="width:250px"></span>
 </td>
 <td>
 જીઓ સર્વે (હા/ના)? ______
@@ -266,11 +276,13 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 <br><br>
 
 <table class="signature">
+
 <tr>
 <td>અરજદાર / પ્રતિનિધિની સહી</td>
 <td>સર્વે કરનાર</td>
 <td>જુ.ઇ. ની સહી</td>
 </tr>
+
 </table>
 
 </body>
@@ -283,7 +295,7 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 # GRID FUNCTION
 # -----------------------------------------------------------
 
-def display_grid(df,print_enable=False):
+def display_grid(df, print_enable=False):
 
     df=df.copy()
 
@@ -352,24 +364,23 @@ if file:
     else:
         df=pd.read_excel(file)
 
-    # remove closed SR
     df=df[df["SR Status"].str.upper()!="CLOSED"]
 
     st.sidebar.title("Filters")
 
-    scheme_list=sorted(df["Name Of Scheme"].dropna().unique())
-    scheme_filter=st.sidebar.selectbox("Select Scheme",["All"]+scheme_list)
+    # Scheme Selection
+    schemes=sorted(df["Name Of Scheme"].dropna().unique())
+    selected_scheme=st.sidebar.pills("Select Scheme",schemes,selection_mode="multi")
 
-    if scheme_filter!="All":
-        df=df[df["Name Of Scheme"]==scheme_filter]
+    if selected_scheme:
+        df=df[df["Name Of Scheme"].isin(selected_scheme)]
 
-    # Better SR Type UI
-    with st.sidebar.expander("SR Type Selection",expanded=True):
+    # SR Type Selection
+    sr_types=sorted(df["SR Type"].dropna().unique())
+    selected_sr=st.sidebar.pills("Select SR Type",sr_types,selection_mode="multi")
 
-        sr_types=sorted(df["SR Type"].dropna().unique())
-        selected_sr=st.multiselect("Choose SR Type",sr_types,default=sr_types)
-
-    df=df[df["SR Type"].isin(selected_sr)]
+    if selected_sr:
+        df=df[df["SR Type"].isin(selected_sr)]
 
     # Search
     search=st.text_input("🔎 Search SR Number")
@@ -384,7 +395,6 @@ if file:
 
     today=pd.Timestamp.today()
 
-    # Stage Logic
     df1=df[(df["Survey Category"].isna())&(df["SR Status"]=="OPEN")].copy()
     df1["Aging Days"]=(today-df1["RC Date"]).dt.days
 
@@ -394,7 +404,6 @@ if file:
     df3=df[(df["Survey Category"].isin(["A","B","C","D"]))&(df["Date Of Est Appr Launch"].notna())&(df["Date Of FQ Issued"].isna())&(df["SR Status"]=="OPEN")].copy()
     df3["Aging Days"]=(today-df3["Date Of Est Appr Launch"]).dt.days
 
-    # Metrics
     col1,col2,col3,col4=st.columns(4)
 
     col1.metric("📝 Survey Pending",len(df1))
@@ -402,7 +411,6 @@ if file:
     col3.metric("💰 FQ Pending",len(df3))
     col4.metric("📊 Total SR",len(df1)+len(df2)+len(df3))
 
-    # Tabs
     tab1,tab2,tab3=st.tabs(["📋 Survey Pending","📐 Estimate Pending","💰 FQ Pending"])
 
     tab1_cols=[
@@ -413,8 +421,10 @@ if file:
     ]
 
     with tab1:
+
         df1=df1[tab1_cols]
         df1.insert(0,"Sr No",range(1,len(df1)+1))
+
         display_grid(df1,print_enable=True)
 
     with tab2:
