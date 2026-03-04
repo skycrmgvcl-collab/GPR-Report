@@ -4,47 +4,83 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 import base64
 import os
 
-# =====================================================
-# PAGE CONFIG
-# =====================================================
-
 st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
-st.markdown("## ⚡ Subdivision SR Monitoring Dashboard")
+
+st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
-# =====================================================
-# SAFE LOGO LOAD
-# =====================================================
+# -------------------------------------------------------
+# Load logo safely
+# -------------------------------------------------------
 
 LOGO_BASE64 = ""
 if os.path.exists("mgvcl_logo.png"):
     with open("mgvcl_logo.png", "rb") as f:
         LOGO_BASE64 = base64.b64encode(f.read()).decode()
 
-# =====================================================
-# PRINT FUNCTION (AS PER ATTACHED FORMAT)
-# =====================================================
+# -------------------------------------------------------
+# Survey Form HTML
+# -------------------------------------------------------
 
 def create_print_html(row):
 
-    exist_cons = row.get("Exist. Cons. No. (For LE)", row.get("Consumer No", ""))
-
     html = f"""
-<div style="font-family:'Nirmala UI','Shruti',sans-serif;font-size:14px;">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
 
-<div style="text-align:center;font-weight:bold;font-size:18px;">
-મધ્ય ગુજરાત વિજ કંપની લિ.
-</div>
+<style>
 
-<div style="text-align:center;">
-(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર
-</div>
+body {{
+font-family:'Nirmala UI','Shruti',sans-serif;
+font-size:14px;
+padding:20px;
+}}
 
-<div style="text-align:center;font-size:18px;font-weight:bold;margin:10px 0;text-decoration:underline;">
-Survey Form
-</div>
+.header {{
+text-align:center;
+font-weight:bold;
+font-size:20px;
+}}
 
-<table border="1" style="width:100%;border-collapse:collapse;">
+.subheader {{
+text-align:center;
+margin-bottom:10px;
+}}
+
+.title {{
+text-align:center;
+font-size:18px;
+font-weight:bold;
+text-decoration:underline;
+margin-bottom:10px;
+}}
+
+table {{
+width:100%;
+border-collapse:collapse;
+}}
+
+td {{
+border:1px solid black;
+padding:6px;
+}}
+
+.blank {{
+height:120px;
+}}
+
+</style>
+</head>
+
+<body onload="window.print()">
+
+<div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
+<div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
+<div class="title">Survey Form</div>
+
+<table>
 <tr>
 <td>તારીખ :</td>
 <td></td>
@@ -54,23 +90,18 @@ Survey Form
 
 <br>
 
-<table border="1" style="width:100%;border-collapse:collapse;">
+<table>
 
 <tr>
 <td width="5%">૧</td>
-<td width="30%">અરજદારનું નામ</td>
+<td width="35%">અરજદારનું નામ</td>
 <td>{row.get("Name Of Applicant","")}</td>
 </tr>
 
 <tr>
 <td>૨</td>
 <td>અરજદારનું સરનામું</td>
-<td>
-{row.get("Address1","")} {row.get("Address2","")},
-{row.get("Village Or City","")},
-{row.get("Taluka","")},
-{row.get("District","")}
-</td>
+<td>{row.get("Address1","")} {row.get("Address2","")}, {row.get("Village Or City","")}, {row.get("Taluka","")}, {row.get("District","")}</td>
 </tr>
 
 <tr>
@@ -82,21 +113,13 @@ Survey Form
 <tr>
 <td>૪</td>
 <td>વપરાશનો હેતુ</td>
-<td>
-{row.get("Consumer Category","")} |
-{row.get("SR Type","")} |
-{row.get("Demand Load","")} {row.get("Load Uom","")}
-</td>
+<td>{row.get("Consumer Category","")} | {row.get("SR Type","")} | {row.get("Demand Load","")} {row.get("Load Uom","")}</td>
 </tr>
 
 <tr>
 <td>૫</td>
 <td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
-<td>
-{row.get("RC Charge","")} |
-{row.get("RC MR NO","")} |
-{row.get("RC Date","")}
-</td>
+<td>{row.get("RC Charge","")} | {row.get("RC MR NO","")} | {row.get("RC Date","")}</td>
 </tr>
 
 <tr>
@@ -138,12 +161,12 @@ Survey Form
 <tr>
 <td>૧૨</td>
 <td>Exist. Cons. No. (For LE)</td>
-<td>{exist_cons}</td>
+<td>{row.get("Consumer No","")}</td>
 </tr>
 
 <tr>
 <td>૧૩</td>
-<td colspan="2" style="height:150px;"></td>
+<td colspan="2" class="blank"></td>
 </tr>
 
 </table>
@@ -151,13 +174,15 @@ Survey Form
 <br><br>
 Signature : _______________________
 
-</div>
+</body>
+</html>
 """
+
     return base64.b64encode(html.encode("utf-8")).decode()
 
-# =====================================================
-# GRID FUNCTION
-# =====================================================
+# -------------------------------------------------------
+# Grid Function
+# -------------------------------------------------------
 
 def display_grid(df, print_enable=False):
 
@@ -165,29 +190,35 @@ def display_grid(df, print_enable=False):
 
     if print_enable:
         df["print_data"] = df.apply(create_print_html, axis=1)
-        df.insert(1, "Print", "")
+        df.insert(1,"Print","")
 
-    cell_renderer = JsCode("""
-    class Renderer {
-        init(params) {
-            this.eGui = document.createElement('span');
-            this.eGui.innerHTML = '🖨';
-            this.eGui.style.cursor = 'pointer';
-            this.eGui.style.fontSize = '18px';
+    renderer = JsCode("""
+class Renderer{
+init(params){
+this.eGui=document.createElement('span');
+this.eGui.innerHTML='🖨';
+this.eGui.style.cursor='pointer';
 
-            this.eGui.addEventListener('click', () => {
+this.eGui.addEventListener('click',()=>{
 
-                const win = window.open("", "_blank");
-                win.document.open("text/html","replace");
-                win.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>" + atob(params.data.print_data) + "</body></html>");
-                win.document.close();
-            });
-        }
-        getGui() { return this.eGui; }
-    }
-    """)
+const win=window.open("","_blank");
+
+const html=atob(params.data.print_data);
+
+win.document.open();
+win.document.write(html);
+win.document.close();
+
+});
+
+}
+
+getGui(){return this.eGui;}
+}
+""")
 
     gb = GridOptionsBuilder.from_dataframe(df)
+
     gb.configure_default_column(
         filter=True,
         sortable=True,
@@ -197,7 +228,7 @@ def display_grid(df, print_enable=False):
     )
 
     if print_enable:
-        gb.configure_column("Print", cellRenderer=cell_renderer, width=70, flex=0)
+        gb.configure_column("Print", cellRenderer=renderer, width=70)
         gb.configure_column("print_data", hide=True)
 
     AgGrid(
@@ -205,54 +236,51 @@ def display_grid(df, print_enable=False):
         gridOptions=gb.build(),
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
-        height=500,
-        theme="streamlit"
+        height=500
     )
 
-# =====================================================
-# SIDEBAR FILTERS (RESTORED)
-# =====================================================
+# -------------------------------------------------------
+# Upload File
+# -------------------------------------------------------
 
-st.sidebar.header("Filters")
-
-file = st.file_uploader("Upload Excel/CSV", type=["xlsx","xls","csv"])
+file = st.file_uploader("Upload Excel / CSV", type=["xlsx","csv"])
 
 if file:
 
-    df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
+    if file.name.endswith("csv"):
+        df = pd.read_csv(file)
+    else:
+        df = pd.read_excel(file)
 
-    # Scheme Filter Restored
+    # sidebar scheme filter
     scheme_list = sorted(df["Name Of Scheme"].dropna().unique())
-    scheme_filter = st.sidebar.selectbox("Name Of Scheme", ["All"] + scheme_list)
+    scheme_filter = st.sidebar.selectbox("Scheme Filter", ["All"] + scheme_list)
 
     if scheme_filter != "All":
         df = df[df["Name Of Scheme"] == scheme_filter]
 
-    # Date conversion
-    for col in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
-
-    df["SR Status"] = df["SR Status"].astype(str)
+    # date conversion
+    for c in ["RC Date","Date Of Survey","Date Of Est Appr Launch","Date Of FQ Issued"]:
+        if c in df.columns:
+            df[c] = pd.to_datetime(df[c], errors="coerce")
 
     today = pd.Timestamp.today()
 
     # Stage 1
-    df1 = df[(df["Survey Category"].isna()) &
-             (df["SR Status"].str.upper()=="OPEN")].copy()
+    df1 = df[(df["Survey Category"].isna()) & (df["SR Status"]=="OPEN")].copy()
     df1["Aging Days"] = (today - df1["RC Date"]).dt.days
 
     # Stage 2
     df2 = df[(df["Survey Category"].isin(["A","B","C","D"])) &
              (df["Date Of Est Appr Launch"].isna()) &
-             (df["SR Status"].str.upper()=="OPEN")].copy()
+             (df["SR Status"]=="OPEN")].copy()
     df2["Aging Days"] = (today - df2["Date Of Survey"]).dt.days
 
     # Stage 3
     df3 = df[(df["Survey Category"].isin(["A","B","C","D"])) &
              (df["Date Of Est Appr Launch"].notna()) &
              (df["Date Of FQ Issued"].isna()) &
-             (df["SR Status"].str.upper()=="OPEN")].copy()
+             (df["SR Status"]=="OPEN")].copy()
     df3["Aging Days"] = (today - df3["Date Of Est Appr Launch"]).dt.days
 
     tab1, tab2, tab3 = st.tabs(["Unsurvey Applications","Estimate Pending","FQ Issue Pending"])
