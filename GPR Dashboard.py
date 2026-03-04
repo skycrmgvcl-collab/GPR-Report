@@ -42,14 +42,14 @@ font-weight:bold;
 
 .subheader {{
 text-align:center;
-margin-bottom:3px;
+margin-bottom:2px;
 }}
 
 .title {{
 text-align:center;
 font-size:14px;
 font-weight:bold;
-margin-bottom:4px;
+margin-bottom:3px;
 }}
 
 table {{
@@ -58,7 +58,7 @@ border-collapse:collapse;
 }}
 
 td {{
-padding:2px 4px;
+padding:2px 3px;
 vertical-align:top;
 }}
 
@@ -69,7 +69,7 @@ width:100%;
 }}
 
 .sketch {{
-height:180px;
+height:260px;
 border:1px solid black;
 margin-top:3px;
 }}
