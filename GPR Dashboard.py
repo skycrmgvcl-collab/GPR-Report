@@ -42,6 +42,7 @@ margin:8mm;
 body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
 font-size:13px;
+margin:0;
 }}
 
 .header {{
@@ -52,6 +53,7 @@ font-weight:bold;
 
 .subheader {{
 text-align:center;
+margin-bottom:5px;
 }}
 
 .title {{
@@ -88,19 +90,23 @@ padding-top:30px;
 }}
 
 </style>
+
 </head>
 
 <body onload="window.print()">
 
 <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
 <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
+
 <div class="title">Survey Form</div>
 
 <table>
+
 <tr>
 <td>તારીખ:- ________________________</td>
 <td style="text-align:right">GP No. ______ &nbsp;&nbsp; 2026</td>
 </tr>
+
 </table>
 
 <br>
@@ -127,7 +133,9 @@ padding-top:30px;
 <tr>
 <td>3</td>
 <td>ફોન નંબર :-</td>
-<td>{row.get("Address2","")} &nbsp;&nbsp; SR No. {row.get("SR Number","")}</td>
+<td>
+{row.get("Address2","")} &nbsp;&nbsp;&nbsp; SR No. {row.get("SR Number","")}
+</td>
 </tr>
 
 <tr>
@@ -149,42 +157,131 @@ padding-top:30px;
 </td>
 </tr>
 
+</table>
+
+<br>
+
+<b>સર્વેની વિગતો :-</b>
+
+<table>
+
 <tr>
-<td>6</td>
+<td width="4%">6</td>
 <td>બાજુવાળાનો ગ્રાહક નંબર :</td>
 <td class="line"></td>
 </tr>
 
 <tr>
 <td>7</td>
-<td>સર્વે કેટેગરી</td>
-<td>{row.get("Survey Category","")}</td>
+<td>
+1. ફીડરનું નામ :- <span class="line" style="width:200px"></span>
+</td>
+<td>
+ફીડરનું કેટેગરી :- ______
+</td>
+</tr>
+
+<tr>
+<td></td>
+<td>
+2. ટ્રાન્સફરનું નામ :- <span class="line" style="width:200px"></span>
+</td>
+<td>
+DTR કપકીટી :- ______
+</td>
+</tr>
+
+<tr>
+<td></td>
+<td>
+3. એલ ટી પોલ નંબર :- <span class="line" style="width:200px"></span>
+</td>
+<td>
+જીઓ સર્વે (હા/ના)? ______
+</td>
+</tr>
+
+<tr>
+<td></td>
+<td colspan="2">
+4. મકાન ઉપરથી કે નજીકથી એચ.ટી/એલ.ટી લાઇન પસાર થાય છે કે કેમ ? :-
+<span class="line"></span>
+</td>
 </tr>
 
 <tr>
 <td>8</td>
-<td colspan="2">
-નકશો તથા અન્ય વિગતો નીચે બતાવી :-
-<div class="sketch"></div>
+<td>
+સદર મકાન કેટલા માળનું છે. :-
+<span class="line"></span>
+</td>
+
+<td>
+વીજ જોડાણ મંગેલ મકાન કાચું છે પાકું? :- ______
 </td>
 </tr>
 
 <tr>
 <td>9</td>
-<td>Exist. Cons. No.</td>
-<td>{row.get("Consumer No","")}</td>
+<td colspan="2">
+સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે કે કેમ ? :-
+<span class="line"></span>
+</td>
+</tr>
+
+<tr>
+<td>10</td>
+<td colspan="2">
+વીજ જોડાણ મંગેલ મકાનમાં અન્ય વિજ જોડાણ હોય તો તેની વિગત (હેતુ સાથે) :-
+<span class="line"></span>
+</td>
+</tr>
+
+<tr>
+<td>12</td>
+<td colspan="2">
+વીજ જોડાણ મંગેલ સ્થળ ગામતળ માં છે કે સિમતલ માં છે? :-
+<span class="line"></span>
+</td>
+</tr>
+
+<tr>
+<td>13</td>
+<td>
+સર્વે કેટેગરી (A/B/C/D) :- <span class="line" style="width:120px"></span>
+</td>
+<td>
+પોલ થી મકાન નું અંતર :- ______
+</td>
+</tr>
+
+<tr>
+<td>14</td>
+<td colspan="2">
+નકશો તથા અન્ય વિગતો નીચે બતાવી :- <br>
+<div class="sketch"></div>
+</td>
+</tr>
+
+<tr>
+<td></td>
+<td colspan="2">
+Exist. Cons. No. (For LE) :- {row.get("Consumer No","")}
+</td>
 </tr>
 
 </table>
 
-<br>
+<br><br>
 
 <table class="signature">
+
 <tr>
-<td>અરજદાર / પ્રતિનિધિની સહી</td>
-<td>સર્વે કરનાર</td>
+<td>અરજદાર / પ્રતિનિધિની સહી.</td>
+<td>સર્વે કરનારનું / સહી<br>નામ<br>હોદ્દો</td>
 <td>જુ.ઇ. ની સહી</td>
 </tr>
+
 </table>
 
 </body>
@@ -192,7 +289,6 @@ padding-top:30px;
 """
 
     return base64.b64encode(html.encode("utf-8")).decode()
-
 # -----------------------------------------------------------
 # GRID DISPLAY
 # -----------------------------------------------------------
