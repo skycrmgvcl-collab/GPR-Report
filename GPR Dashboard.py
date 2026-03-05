@@ -23,69 +23,70 @@ def create_print_html(row):
 
 <style>
 
-@page {
+@page {{
 size:A4;
 margin:3mm;
-}
+}}
 
-body {
+body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
 font-size:12px;
 margin:0;
 line-height:1.15;
-}
+}}
 
-.header {
+.header {{
 text-align:center;
 font-size:18px;
 font-weight:bold;
-}
+}}
 
-.subheader {
+.subheader {{
 text-align:center;
 margin-bottom:2px;
-}
+}}
 
-.title {
+.title {{
 text-align:center;
 font-size:15px;
 font-weight:bold;
 margin-bottom:4px;
-}
+}}
 
-table {
+table {{
 width:100%;
 border-collapse:collapse;
-}
+}}
 
-td {
+td {{
 padding:3px 4px;
 vertical-align:top;
-}
+}}
 
-.line {
+.line {{
 border-bottom:1px solid black;
 display:inline-block;
 width:100%;
-}
+}}
 
-.sketch {
+.sketch {{
 height:300px;
 border:1px solid black;
 margin-top:4px;
-}
+}}
 
-.signature td {
+.signature td {{
 text-align:center;
 padding-top:25px;
-}
+}}
 
-.srno {
+.srno {{
 font-weight:bold;
 font-size:16px;
-}
+}}
 
 </style>
+
 </head>
 
 <body onload="window.print()">
@@ -95,12 +96,10 @@ font-size:16px;
 <div class="title">Survey Form</div>
 
 <table>
-
 <tr>
 <td>તારીખ:- __________________</td>
 <td style="text-align:right">GP No. ______ 2026</td>
 </tr>
-
 </table>
 
 <br>
@@ -254,6 +253,7 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 
     return base64.b64encode(html.encode("utf-8")).decode()
 
+
 # -----------------------------------------------------------
 # GRID FUNCTION
 # -----------------------------------------------------------
@@ -313,6 +313,7 @@ getGui(){return this.eGui;}
         height=min(650,120+len(df)*30)
     )
 
+
 # -----------------------------------------------------------
 # FILE UPLOAD
 # -----------------------------------------------------------
@@ -328,32 +329,17 @@ if file:
 
     df=df[df["SR Status"].str.upper()!="CLOSED"]
 
-    st.sidebar.header("🎛 Filters")
+    st.sidebar.header("Filters")
 
-    # Scheme Selection
     schemes=sorted(df["Name Of Scheme"].dropna().unique())
-
-    selected_scheme=st.sidebar.multiselect(
-        "🔘 Select Scheme",
-        schemes,
-        default=schemes
-    )
-
+    selected_scheme=st.sidebar.multiselect("Select Scheme",schemes,default=schemes)
     df=df[df["Name Of Scheme"].isin(selected_scheme)]
 
-    # SR Type Selection
     sr_types=sorted(df["SR Type"].dropna().unique())
-
-    selected_sr=st.sidebar.multiselect(
-        "🔘 Select SR Type",
-        sr_types,
-        default=sr_types
-    )
-
+    selected_sr=st.sidebar.multiselect("Select SR Type",sr_types,default=sr_types)
     df=df[df["SR Type"].isin(selected_sr)]
 
-    # Search
-    search=st.text_input("🔎 Search SR Number")
+    search=st.text_input("Search SR Number")
 
     if search:
         df=df[df["SR Number"].astype(str).str.contains(search,case=False)]
@@ -389,7 +375,7 @@ if file:
         buffer=io.BytesIO()
         df1.to_excel(buffer,index=False)
 
-        st.download_button("⬇ Export Survey Pending",buffer.getvalue(),"SurveyPending.xlsx")
+        st.download_button("Export Survey Pending",buffer.getvalue(),"SurveyPending.xlsx")
 
         display_grid(df1,print_enable=True)
 
@@ -400,7 +386,7 @@ if file:
         buffer=io.BytesIO()
         df2.to_excel(buffer,index=False)
 
-        st.download_button("⬇ Export Estimate Pending",buffer.getvalue(),"EstimatePending.xlsx")
+        st.download_button("Export Estimate Pending",buffer.getvalue(),"EstimatePending.xlsx")
 
         display_grid(df2)
 
@@ -411,7 +397,7 @@ if file:
         buffer=io.BytesIO()
         df3.to_excel(buffer,index=False)
 
-        st.download_button("⬇ Export FQ Pending",buffer.getvalue(),"FQPending.xlsx")
+        st.download_button("Export FQ Pending",buffer.getvalue(),"FQPending.xlsx")
 
         display_grid(df3)
 
