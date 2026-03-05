@@ -23,69 +23,69 @@ def create_print_html(row):
 
 <style>
 
-@page {{
+@page {
 size:A4;
-margin:5mm;
-}}
+margin:3mm;
+}
 
-body {{
+body {
 font-family:'Nirmala UI','Shruti',sans-serif;
 font-size:12px;
 margin:0;
-}}
+line-height:1.15;
+}
 
-.header {{
+.header {
 text-align:center;
-font-size:16px;
+font-size:18px;
 font-weight:bold;
-}}
+}
 
-.subheader {{
+.subheader {
 text-align:center;
 margin-bottom:2px;
-}}
+}
 
-.title {{
+.title {
 text-align:center;
-font-size:14px;
+font-size:15px;
 font-weight:bold;
-margin-bottom:3px;
-}}
+margin-bottom:4px;
+}
 
-table {{
+table {
 width:100%;
 border-collapse:collapse;
-}}
+}
 
-td {{
-padding:2px 3px;
+td {
+padding:3px 4px;
 vertical-align:top;
-}}
+}
 
-.line {{
+.line {
 border-bottom:1px solid black;
 display:inline-block;
 width:100%;
-}}
+}
 
-.sketch {{
-height:260px;
+.sketch {
+height:300px;
 border:1px solid black;
-margin-top:3px;
-}}
+margin-top:4px;
+}
 
-.signature td {{
+.signature td {
 text-align:center;
-padding-top:20px;
-}}
+padding-top:25px;
+}
 
-.srno {{
+.srno {
 font-weight:bold;
-font-size:15px;
-}}
+font-size:16px;
+}
 
 </style>
-
 </head>
 
 <body onload="window.print()">
