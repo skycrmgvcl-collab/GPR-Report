@@ -15,7 +15,7 @@ st.caption("Survey → Estimate → FQ → Release Stage Tracking")
 
 def create_print_html(row):
 
-    html = f"""
+    html=f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -92,7 +92,6 @@ font-size:15px;
 
 <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
 <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
-
 <div class="title">Survey Form</div>
 
 <table>
@@ -318,34 +317,42 @@ getGui(){return this.eGui;}
 # FILE UPLOAD
 # -----------------------------------------------------------
 
-file=st.file_uploader("Upload Excel / CSV",type=["xlsx","csv"])
+file=st.file_uploader("Upload Excel / CSV",type=["xls","xlsx","csv"])
 
 if file:
 
-    df=pd.read_csv(file) if file.name.endswith("csv") else pd.read_excel(file)
+    if file.name.endswith("csv"):
+        df=pd.read_csv(file)
+    else:
+        df=pd.read_excel(file)
 
     df=df[df["SR Status"].str.upper()!="CLOSED"]
 
-    st.sidebar.title("Filters")
+    st.sidebar.header("🎛 Filters")
 
+    # Scheme Selection
     schemes=sorted(df["Name Of Scheme"].dropna().unique())
 
-    selected_scheme=[]
-    for s in schemes:
-        if st.sidebar.checkbox(s,True):
-            selected_scheme.append(s)
+    selected_scheme=st.sidebar.multiselect(
+        "🔘 Select Scheme",
+        schemes,
+        default=schemes
+    )
 
     df=df[df["Name Of Scheme"].isin(selected_scheme)]
 
+    # SR Type Selection
     sr_types=sorted(df["SR Type"].dropna().unique())
 
-    selected_sr=[]
-    for s in sr_types:
-        if st.sidebar.checkbox(s,True,key=s):
-            selected_sr.append(s)
+    selected_sr=st.sidebar.multiselect(
+        "🔘 Select SR Type",
+        sr_types,
+        default=sr_types
+    )
 
     df=df[df["SR Type"].isin(selected_sr)]
 
+    # Search
     search=st.text_input("🔎 Search SR Number")
 
     if search:
@@ -381,6 +388,7 @@ if file:
 
         buffer=io.BytesIO()
         df1.to_excel(buffer,index=False)
+
         st.download_button("⬇ Export Survey Pending",buffer.getvalue(),"SurveyPending.xlsx")
 
         display_grid(df1,print_enable=True)
@@ -391,6 +399,7 @@ if file:
 
         buffer=io.BytesIO()
         df2.to_excel(buffer,index=False)
+
         st.download_button("⬇ Export Estimate Pending",buffer.getvalue(),"EstimatePending.xlsx")
 
         display_grid(df2)
@@ -401,6 +410,7 @@ if file:
 
         buffer=io.BytesIO()
         df3.to_excel(buffer,index=False)
+
         st.download_button("⬇ Export FQ Pending",buffer.getvalue(),"FQPending.xlsx")
 
         display_grid(df3)
