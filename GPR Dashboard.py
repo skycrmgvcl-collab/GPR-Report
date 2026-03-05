@@ -7,7 +7,7 @@ import io
 st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
 
 st.title("⚡ Subdivision SR Monitoring Dashboard")
-st.caption("Survey → Estimate → FQ → Release Stage Tracking")
+st.caption("Survey → Estimate → FQ Tracking")
 
 # -----------------------------------------------------------
 # SURVEY FORM
@@ -260,10 +260,10 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 
 def display_grid(df, print_enable=False):
 
-    df=df.copy()
+    df=df.copy().fillna("")
 
     if print_enable:
-        df["print_data"]=df.apply(create_print_html,axis=1)
+        df["print_data"]=df.apply(lambda r:create_print_html(r),axis=1)
         df.insert(1,"Print","")
 
     renderer=JsCode("""
@@ -327,16 +327,20 @@ if file:
     else:
         df=pd.read_excel(file)
 
+    df.columns=df.columns.str.strip()
+
     df=df[df["SR Status"].str.upper()!="CLOSED"]
 
     st.sidebar.header("Filters")
 
     schemes=sorted(df["Name Of Scheme"].dropna().unique())
     selected_scheme=st.sidebar.multiselect("Select Scheme",schemes,default=schemes)
+
     df=df[df["Name Of Scheme"].isin(selected_scheme)]
 
     sr_types=sorted(df["SR Type"].dropna().unique())
     selected_sr=st.sidebar.multiselect("Select SR Type",sr_types,default=sr_types)
+
     df=df[df["SR Type"].isin(selected_sr)]
 
     search=st.text_input("Search SR Number")
@@ -373,9 +377,10 @@ if file:
         df1.insert(0,"Sr No",range(1,len(df1)+1))
 
         buffer=io.BytesIO()
-        df1.to_excel(buffer,index=False)
+        df1.to_excel(buffer,index=False,engine="xlsxwriter")
+        buffer.seek(0)
 
-        st.download_button("Export Survey Pending",buffer.getvalue(),"SurveyPending.xlsx")
+        st.download_button("Export Survey Pending",buffer,"SurveyPending.xlsx")
 
         display_grid(df1,print_enable=True)
 
@@ -384,9 +389,10 @@ if file:
         df2.insert(0,"Sr No",range(1,len(df2)+1))
 
         buffer=io.BytesIO()
-        df2.to_excel(buffer,index=False)
+        df2.to_excel(buffer,index=False,engine="xlsxwriter")
+        buffer.seek(0)
 
-        st.download_button("Export Estimate Pending",buffer.getvalue(),"EstimatePending.xlsx")
+        st.download_button("Export Estimate Pending",buffer,"EstimatePending.xlsx")
 
         display_grid(df2)
 
@@ -395,9 +401,10 @@ if file:
         df3.insert(0,"Sr No",range(1,len(df3)+1))
 
         buffer=io.BytesIO()
-        df3.to_excel(buffer,index=False)
+        df3.to_excel(buffer,index=False,engine="xlsxwriter")
+        buffer.seek(0)
 
-        st.download_button("Export FQ Pending",buffer.getvalue(),"FQPending.xlsx")
+        st.download_button("Export FQ Pending",buffer,"FQPending.xlsx")
 
         display_grid(df3)
 
