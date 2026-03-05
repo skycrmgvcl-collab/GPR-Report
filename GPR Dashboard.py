@@ -15,7 +15,7 @@ st.caption("Survey → Estimate → FQ Tracking")
 
 def create_print_html(row):
 
-    html=f"""
+    html = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -25,32 +25,33 @@ def create_print_html(row):
 
 @page {{
 size:A4;
-margin:3mm;
+margin:2mm;
 }}
 
 body {{
 font-family:'Nirmala UI','Shruti',sans-serif;
-font-size:12px;
+font-size:13px;
 margin:0;
-line-height:1.15;
 }}
 
 .header {{
 text-align:center;
-font-size:18px;
+font-size:20px;
 font-weight:bold;
 }}
 
 .subheader {{
 text-align:center;
-margin-bottom:2px;
+font-size:14px;
+margin-bottom:5px;
 }}
 
 .title {{
 text-align:center;
-font-size:15px;
+font-size:16px;
 font-weight:bold;
-margin-bottom:4px;
+margin-bottom:6px;
+text-decoration: underline;
 }}
 
 table {{
@@ -59,30 +60,34 @@ border-collapse:collapse;
 }}
 
 td {{
-padding:3px 4px;
+border:1px solid black;
+padding:4px;
 vertical-align:top;
 }}
 
-.line {{
-border-bottom:1px solid black;
-display:inline-block;
-width:100%;
+.label {{
+width:28%;
+font-weight:bold;
+}}
+
+.value {{
+width:72%;
 }}
 
 .sketch {{
-height:300px;
+height:340px;
 border:1px solid black;
 margin-top:4px;
 }}
 
 .signature td {{
 text-align:center;
-padding-top:25px;
+height:70px;
 }}
 
 .srno {{
 font-weight:bold;
-font-size:16px;
+font-size:17px;
 }}
 
 </style>
@@ -93,50 +98,46 @@ font-size:16px;
 
 <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
 <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
+
 <div class="title">Survey Form</div>
 
 <table>
+
 <tr>
-<td>તારીખ:- __________________</td>
-<td style="text-align:right">GP No. ______ 2026</td>
+<td colspan="2">તારીખ :- _______________________</td>
+<td colspan="2" style="text-align:right">GP No. ______ &nbsp;&nbsp; 2026</td>
 </tr>
-</table>
-
-<br>
-
-<table>
 
 <tr>
-<td width="4%">1</td>
-<td width="28%">અરજદારનું નામ :-</td>
-<td class="line">{row.get("Name Of Applicant","")}</td>
+<td width="5%">1</td>
+<td class="label">અરજદારનું નામ</td>
+<td colspan="2" class="value">{row.get("Name Of Applicant","")}</td>
 </tr>
 
 <tr>
 <td>2</td>
-<td>અરજદારનું સરનામું :-</td>
-<td class="line">
-{row.get("Address1","")} {row.get("Address2","")},
-{row.get("Village Or City","")},
-{row.get("Taluka","")},
+<td class="label">અરજદારનું સરનામું</td>
+<td colspan="2" class="value">
+{row.get("Address1","")} {row.get("Address2","")} ,
+{row.get("Village Or City","")} ,
+{row.get("Taluka","")} ,
 {row.get("District","")}
 </td>
 </tr>
 
 <tr>
 <td>3</td>
-<td>ફોન નંબર :-</td>
+<td class="label">ફોન નંબર</td>
 <td>
 {row.get("Address2","")}
-&nbsp;&nbsp;
-<span class="srno">SR No : {row.get("SR Number","")}</span>
 </td>
+<td class="srno">SR No : {row.get("SR Number","")}</td>
 </tr>
 
 <tr>
 <td>4</td>
-<td>વપરાશનો હેતુ :-</td>
-<td class="line">
+<td class="label">વપરાશનો હેતુ</td>
+<td colspan="2">
 {row.get("Consumer Category","")} |
 {row.get("SR Type","")} |
 {row.get("Demand Load","")} {row.get("Load Uom","")}
@@ -145,84 +146,79 @@ font-size:16px;
 
 <tr>
 <td>5</td>
-<td>રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર :-</td>
-<td>
-{row.get("RC Charge","")} |
-{row.get("RC MR NO","")}
-&nbsp;&nbsp; તારીખ:- {row.get("RC Date","")}
-</td>
-</tr>
-
-</table>
-
-<br>
-
-<b>સર્વેની વિગતો :-</b>
-
-<table>
-
-<tr>
-<td width="4%">6</td>
-<td>બાજુવાળાનો ગ્રાહક નંબર :</td>
-<td class="line"></td>
-</tr>
-
-<tr>
-<td>7</td>
-<td>1. ફીડરનું નામ :- <span class="line" style="width:220px"></span></td>
-<td>ફીડર કેટેગરી :- ______</td>
-</tr>
-
-<tr>
-<td></td>
-<td>2. ટ્રાન્સફોર્મરનું નામ :- <span class="line" style="width:220px"></span></td>
-<td>ટ્રાન્સફોર્મર કેપેસીટી :- ______</td>
-</tr>
-
-<tr>
-<td></td>
-<td>3. એલ ટી પોલ નંબર :- <span class="line" style="width:220px"></span></td>
-<td>જીઓ સર્વે (હા/ના)? ______</td>
-</tr>
-
-<tr>
-<td></td>
+<td class="label">રજીસ્ટ્રેશન ચાર્જ તથા પાવતી નંબર</td>
 <td colspan="2">
-4. મકાન ઉપરથી કે નજીકથી HT/LT લાઇન પસાર થાય છે ?
-<span class="line"></span>
+{row.get("RC Charge","")} |
+{row.get("RC MR NO","")} |
+તારીખ : {row.get("RC Date","")}
 </td>
+</tr>
+
+<tr>
+<td colspan="4"><b>સર્વેની વિગતો</b></td>
+</tr>
+
+<tr>
+<td>6</td>
+<td class="label">બાજુવાળાનો ગ્રાહક નંબર</td>
+<td colspan="2"></td>
+</tr>
+
+<tr>
+<td rowspan="4">7</td>
+<td>1. ફીડરનું નામ</td>
+<td></td>
+<td>ફીડર કેટેગરી</td>
+</tr>
+
+<tr>
+<td>2. ટ્રાન્સફોર્મરનું નામ</td>
+<td></td>
+<td>DTR કેપેસીટી</td>
+</tr>
+
+<tr>
+<td>3. એલ ટી પોલ નંબર</td>
+<td></td>
+<td>જીઓ સર્વે (હા/ના)</td>
+</tr>
+
+<tr>
+<td colspan="3">4. મકાન ઉપરથી કે નજીકથી HT/LT લાઇન પસાર થાય છે ?</td>
 </tr>
 
 <tr>
 <td>8</td>
-<td>સદર મકાન કેટલા માળનું છે :- <span class="line"></span></td>
-<td>કાચું કે પાકું :- ______</td>
+<td>મકાન કેટલા માળનું છે</td>
+<td></td>
+<td>કાચું / પાકું</td>
 </tr>
 
 <tr>
 <td>9</td>
-<td colspan="2">સદર મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે ? <span class="line"></span></td>
+<td colspan="3">મકાનની ઊંચાઈ ૧૫ મીટર કરતાં વધારે છે ?</td>
 </tr>
 
 <tr>
 <td>10</td>
-<td colspan="2">અન્ય વિજ જોડાણ હોય તો વિગત <span class="line"></span></td>
+<td colspan="3">અન્ય વિજ જોડાણ હોય તો વિગત</td>
 </tr>
 
 <tr>
 <td>12</td>
-<td colspan="2">ગામતળ / સિમતળ <span class="line"></span></td>
+<td colspan="3">ગામતળ / સિમતળ</td>
 </tr>
 
 <tr>
 <td>13</td>
-<td>સર્વે કેટેગરી :- ______</td>
-<td>પોલ થી અંતર :- ______</td>
+<td>સર્વે કેટેગરી</td>
+<td></td>
+<td>પોલ થી અંતર</td>
 </tr>
 
 <tr>
 <td>14</td>
-<td colspan="2">
+<td colspan="3">
 નકશો તથા અન્ય વિગતો
 <div class="sketch"></div>
 </td>
@@ -230,8 +226,8 @@ font-size:16px;
 
 <tr>
 <td></td>
-<td colspan="2">
-Exist. Cons. No. :- {row.get("Consumer No","")}
+<td colspan="3">
+Exist. Cons. No. : {row.get("Consumer No","")}
 </td>
 </tr>
 
@@ -240,11 +236,13 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 <br>
 
 <table class="signature">
+
 <tr>
 <td>અરજદાર / પ્રતિનિધિની સહી</td>
-<td>સર્વે કરનાર</td>
+<td>સર્વે કરનારનું નામ / સહી</td>
 <td>જુ.ઇ. ની સહી</td>
 </tr>
+
 </table>
 
 </body>
@@ -252,7 +250,6 @@ Exist. Cons. No. :- {row.get("Consumer No","")}
 """
 
     return base64.b64encode(html.encode("utf-8")).decode()
-
 
 # -----------------------------------------------------------
 # GRID FUNCTION
