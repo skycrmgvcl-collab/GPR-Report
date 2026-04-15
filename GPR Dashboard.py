@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+from st_aggrid import AgGrid, GridOptionsBuilder
 import base64
 import io
 
@@ -10,7 +10,7 @@ st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ Tracking")
 
 # -----------------------------------------------------------
-# SURVEY FORM (UNCHANGED - YOUR DESIGN)
+# SURVEY FORM (A4 FULL PAGE)
 # -----------------------------------------------------------
 
 def create_print_html(row):
@@ -41,9 +41,6 @@ border:1px solid black;
 padding:4px;
 vertical-align:top;
 }}
-
-.label {{ width:28%; font-weight:bold; }}
-.value {{ width:72%; }}
 
 .sketch {{
 height:340px;
@@ -79,13 +76,13 @@ font-size:17px;
 
 <tr>
 <td width="5%">1</td>
-<td class="label">અરજદારનું નામ</td>
+<td>અરજદારનું નામ</td>
 <td colspan="2">{row.get("Name Of Applicant","")}</td>
 </tr>
 
 <tr>
 <td>2</td>
-<td class="label">અરજદારનું સરનામું</td>
+<td>અરજદારનું સરનામું</td>
 <td colspan="2">
 {row.get("Address1","")} {row.get("Address2","")},
 {row.get("Village Or City","")},
@@ -96,14 +93,14 @@ font-size:17px;
 
 <tr>
 <td>3</td>
-<td class="label">ફોન નંબર</td>
+<td>ફોન નંબર</td>
 <td>{row.get("Address2","")}</td>
 <td class="srno">SR No : {row.get("SR Number","")}</td>
 </tr>
 
 <tr>
 <td>4</td>
-<td class="label">વપરાશનો હેતુ</td>
+<td>વપરાશનો હેતુ</td>
 <td colspan="2">
 {row.get("Consumer Category","")} |
 {row.get("SR Type","")} |
@@ -113,7 +110,7 @@ font-size:17px;
 
 <tr>
 <td>5</td>
-<td class="label">રજીસ્ટ્રેશન ચાર્જ</td>
+<td>રજીસ્ટ્રેશન ચાર્જ</td>
 <td colspan="2">
 {row.get("RC Charge","")} |
 {row.get("RC MR NO","")} |
@@ -123,11 +120,7 @@ font-size:17px;
 
 <tr><td colspan="4"><b>સર્વેની વિગતો</b></td></tr>
 
-<tr>
-<td>6</td>
-<td>બાજુવાળાનો ગ્રાહક નંબર</td>
-<td colspan="2"></td>
-</tr>
+<tr><td>6</td><td>બાજુવાળાનો ગ્રાહક નંબર</td><td colspan="2"></td></tr>
 
 <tr><td rowspan="4">7</td><td>ફીડર</td><td></td><td>કેટેગરી</td></tr>
 <tr><td>ટ્રાન્સફોર્મર</td><td></td><td>કેપેસીટી</td></tr>
@@ -172,52 +165,48 @@ font-size:17px;
     return base64.b64encode(html.encode("utf-8")).decode()
 
 # -----------------------------------------------------------
-# GRID FUNCTION (FIXED)
+# GRID (SAFE VERSION)
 # -----------------------------------------------------------
 
 def display_grid(df, print_enable=False, grid_key="grid"):
 
     df = df.copy().fillna("").reset_index(drop=True)
 
-    if print_enable:
-        df["print_data"] = df.apply(lambda r: create_print_html(r), axis=1)
-        df.insert(1, "Print", "")
-
-    renderer = JsCode("""
-class Renderer{
-init(params){
-this.eGui=document.createElement('span');
-this.eGui.innerHTML='🖨';
-this.eGui.style.cursor='pointer';
-
-this.eGui.addEventListener('click',()=>{
-const win=window.open("","_blank");
-const b64=params.data.print_data;
-const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-const html=new TextDecoder("utf-8").decode(bytes);
-win.document.write(html);
-});
-}
-getGui(){return this.eGui;}
-}
-""")
-
-    gb = GridOptionsBuilder.from_dataframe(df)
-
-    gb.configure_default_column(filter=True, sortable=True, resizable=True, flex=1)
-
-    if print_enable:
-        gb.configure_column("Print", cellRenderer=renderer, width=70)
-        gb.configure_column("print_data", hide=True)
-
     AgGrid(
         df,
-        gridOptions=gb.build(),
-        allow_unsafe_jscode=True,
-        fit_columns_on_grid_load=True,
         height=min(650,120+len(df)*30),
-        key=grid_key   # ✅ FIX
+        fit_columns_on_grid_load=True,
+        key=grid_key
     )
+
+    if print_enable:
+
+        st.markdown("### 🖨 Print Survey Form")
+
+        selected_index = st.number_input(
+            "Enter Sr No to Print",
+            min_value=1,
+            max_value=len(df),
+            step=1,
+            key=f"num_{grid_key}"
+        )
+
+        if st.button("Print Selected", key=f"btn_{grid_key}"):
+
+            row = df.iloc[selected_index-1]
+
+            html = create_print_html(row)
+
+            js = f"""
+            <script>
+            var win = window.open("", "_blank");
+            var html = atob("{html}");
+            win.document.write(html);
+            win.document.close();
+            </script>
+            """
+
+            st.components.v1.html(js, height=0)
 
 # -----------------------------------------------------------
 # FILE UPLOAD
