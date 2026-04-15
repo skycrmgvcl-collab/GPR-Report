@@ -24,19 +24,17 @@ if file:
     for col in df_raw.columns:
         df_raw[col] = df_raw[col].astype(str).str.strip().replace(['NULL', 'null', 'nan', 'NaN', 'None', 'NAT'], "")
 
-    # Sidebar Filters
-    st.sidebar.header("🔍 Filter Options")
-    
+    # Sidebar Filters (Restored)
+    st.sidebar.header("🔍 Filters")
     unique_schemes = sorted([x for x in df_raw["Name Of Scheme"].unique() if x != ""])
-    sel_schemes = st.sidebar.multiselect("Select Scheme", unique_schemes, default=unique_schemes)
+    sel_schemes = st.sidebar.multiselect("Scheme", unique_schemes, default=unique_schemes)
     
     unique_types = sorted([x for x in df_raw["SR Type"].unique() if x != ""])
-    sel_types = st.sidebar.multiselect("Select SR Type", unique_types, default=unique_types)
+    sel_types = st.sidebar.multiselect("SR Type", unique_types, default=unique_types)
 
-    # Search Bar
-    search_query = st.sidebar.text_input("Search Name or SR Number")
+    search_query = st.sidebar.text_input("Search SR or Name")
 
-    # Applying the Filters
+    # Apply Filter Logic
     df_filtered = df_raw[
         (df_raw["Name Of Scheme"].isin(sel_schemes)) & 
         (df_raw["SR Type"].isin(sel_types))
@@ -49,59 +47,105 @@ if file:
         ]
 
     # -----------------------------------------------------------
-    # JAVASCRIPT RENDERER (Inline Fix)
+    # FULL SURVEY FORM JAVASCRIPT (All Fields Restored)
     # -----------------------------------------------------------
-    # This script creates a self-contained button that builds the HTML 
-    # and opens it in a new window immediately upon click.
     render_print_button = JsCode("""
     class PrintRenderer {
         init(params) {
             this.eGui = document.createElement('div');
             this.eGui.innerHTML = `
-                <button style="background-color: #d32f2f; color: white; border: none; 
-                border-radius: 4px; cursor: pointer; padding: 4px 12px; font-weight: bold;">
-                🖨️ PDF
+                <button style="background-color: #2e7d32; color: white; border: none; 
+                border-radius: 4px; cursor: pointer; padding: 4px 10px; font-weight: bold;">
+                🖨️ PDF Form
                 </button>
             `;
             this.btn = this.eGui.querySelector('button');
             this.btn.addEventListener('click', () => {
-                const d = params.data;
+                const r = params.data;
                 const htmlContent = `
                     <html>
                     <head>
                         <meta charset="UTF-8">
                         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
                         <style>
-                            body { font-family: 'Noto Sans Gujarati', sans-serif; padding: 40px; line-height: 1.5; }
-                            .header { text-align: center; font-size: 22px; font-weight: bold; }
-                            .subheader { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                            @page { size: A4; margin: 5mm; }
+                            body { font-family: 'Noto Sans Gujarati', sans-serif; font-size: 13px; margin: 0; padding: 20px; }
+                            .header { text-align: center; font-size: 20px; font-weight: bold; }
+                            .subheader { text-align: center; font-size: 14px; }
+                            .title { text-align: center; font-size: 16px; font-weight: bold; text-decoration: underline; margin: 10px 0; }
                             table { width: 100%; border-collapse: collapse; }
-                            td { border: 1px solid black; padding: 10px; }
-                            .label { font-weight: bold; background: #f0f0f0; width: 30%; }
-                            .sr-no { font-size: 24px; font-weight: bold; color: #d32f2f; }
-                            .sketch { border: 1px solid black; height: 300px; margin-top: 20px; text-align:center; color:#ccc; padding-top:100px; font-size:30px; }
+                            td { border: 1px solid black; padding: 6px; }
+                            .label-col { width: 25%; }
+                            .sketch { height: 320px; border: 1px solid black; position: relative; }
+                            .srno { font-weight: bold; font-size: 17px; color: #d32f2f; }
                         </style>
                     </head>
                     <body>
                         <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
-                        <div class="subheader">સબ ડિવિઝન, વિરપુર</div>
-                        <h3 style="text-align:center">સર્વે ફોર્મ (Survey Form)</h3>
+                        <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
+                        <div class="title">Survey Form</div>
+
                         <table>
-                            <tr><td class="label">અરજદારનું નામ</td><td colspan="2">${d['Name Of Applicant'] || ''}</td></tr>
-                            <tr><td class="label">સરનામું</td><td colspan="2">${d['Address1'] || ''} ${d['Address2'] || ''}, ${d['Village Or City'] || ''}</td></tr>
-                            <tr><td class="label">SR Number</td><td class="sr-no">${d['SR Number'] || ''}</td><td>મોબાઈલ: ${d['Mobile Number'] || ''}</td></tr>
-                            <tr><td class="label">લોડ વિગત</td><td colspan="2">${d['Demand Load'] || ''} ${d['Load Uom'] || ''} (${d['SR Type'] || ''})</td></tr>
+                            <tr>
+                                <td colspan="2">તારીખ :- __________</td>
+                                <td colspan="2" style="text-align:right">વર્ષ: 2026</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">૧. અરજદારનું નામ</td>
+                                <td colspan="3">${r['Name Of Applicant'] || ''}</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">૨. અરજદારનું સરનામું</td>
+                                <td colspan="3">
+                                    ${r['Address1'] || ''} ${r['Address2'] || ''}, 
+                                    ${r['Village Or City'] || ''}, ${r['Taluka'] || ''}, ${r['District'] || ''}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">૩. ફોન નંબર</td>
+                                <td>${r['Mobile Number'] || ''}</td>
+                                <td class="srno" colspan="2">SR No : ${r['SR Number'] || ''}</td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">૪. વપરાશનો હેતુ</td>
+                                <td colspan="3">
+                                    ${r['Consumer Category'] || ''} | ${r['SR Type'] || ''} | 
+                                    ${r['Demand Load'] || ''} ${r['Load Uom'] || ''}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label-col">૫. રજીસ્ટ્રેશન ચાર્જ</td>
+                                <td colspan="3">
+                                    ચાર્જ: ${r['RC Charge'] || ''} | MR NO: ${r['RC MR NO'] || ''}
+                                </td>
+                            </tr>
+                            <tr><td colspan="4"><b>સર્વે વિગતો (Office Use Only)</b></td></tr>
+                            <tr><td>૬. બાજુવાળો ગ્રાહક નંબર</td><td colspan="3"></td></tr>
+                            <tr><td>૭. ફીડર / ટ્રાન્સફોર્મર / પોલ</td><td colspan="3"></td></tr>
+                            <tr><td>૮. મકાન વિગત</td><td colspan="3"></td></tr>
+                            <tr><td>૯. ઊંચાઈ 15 મીટરથી વધુ?</td><td colspan="3"></td></tr>
+                            <tr><td>૧૦. અન્ય જોડાણ</td><td colspan="3"></td></tr>
+                            <tr><td>૧૧. ગામતળ / સિમતળ</td><td colspan="3"></td></tr>
+                            <tr><td>૧૨. સર્વે કેટેગરી</td><td></td><td>પોલ અંતર</td><td></td></tr>
+                            <tr>
+                                <td colspan="4">
+                                    ૧૩. નકશો (Sketch)
+                                    <div class="sketch"></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="4">Exist. Cons. No : ${r['Consumer No'] || ''}</td>
+                            </tr>
                         </table>
-                        <div class="sketch">નકશો (SKETCH)</div>
                         <script>
                             document.fonts.ready.then(() => { window.print(); });
                         </script>
                     </body>
                     </html>
                 `;
-                var printWindow = window.open('', '_blank');
-                printWindow.document.write(htmlContent);
-                printWindow.document.close();
+                var w = window.open('', '_blank');
+                w.document.write(htmlContent);
+                w.document.close();
             });
         }
         getGui() { return this.eGui; }
@@ -109,56 +153,31 @@ if file:
     """)
 
     # -----------------------------------------------------------
-    # GRID CONFIGURATION
+    # GRID RENDERER
     # -----------------------------------------------------------
     def show_grid(data, key):
         gb = GridOptionsBuilder.from_dataframe(data)
         gb.configure_default_column(resizable=True, filter=True, sortable=True)
-        
-        # Add the Action Column
-        gb.configure_column(
-            "PDF_Print", 
-            headerName="Action", 
-            cellRenderer=render_print_button, 
-            width=100, 
-            pinned='left'
-        )
-        
+        gb.configure_column("Print", headerName="Action", cellRenderer=render_print_button, width=110, pinned='left')
         gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=15)
-        gridOptions = gb.build()
         
-        AgGrid(
-            data, 
-            gridOptions=gridOptions, 
-            height=500, 
-            theme="streamlit", 
-            allow_unsafe_jscode=True, 
-            key=key,
-            reload_data=True
-        )
+        AgGrid(data, gridOptions=gb.build(), height=500, theme="streamlit", 
+               allow_unsafe_jscode=True, key=key, reload_data=True)
 
     # -----------------------------------------------------------
-    # DISPLAY STAGES
+    # TABS
     # -----------------------------------------------------------
-    t1, t2, t3 = st.tabs(["📋 Survey Pending", "📐 Estimate Pending", "💰 FQ Pending"])
-
-    # Stage 1: Filter Logic
-    df_survey = df_filtered[
-        (df_filtered["Survey Category"] == "") & 
-        (df_filtered["SR Status"].str.upper() == "OPEN")
-    ]
+    t1, t2, t3 = st.tabs(["📋 Survey", "📐 Estimate", "💰 FQ"])
 
     with t1:
-        st.info(f"📍 {len(df_survey)} SRs waiting for survey.")
-        show_grid(df_survey, "survey_grid")
+        df_survey = df_filtered[(df_filtered["Survey Category"] == "") & (df_filtered["SR Status"].str.upper() == "OPEN")]
+        st.write(f"Pending Surveys: **{len(df_survey)}**")
+        show_grid(df_survey, "grid1")
 
     with t2:
-        df_est = df_filtered[
-            (df_filtered["Survey Category"] != "") & 
-            (df_filtered["Date Of Est Appr Launch"] == "")
-        ]
-        st.info(f"📍 {len(df_est)} SRs waiting for estimate.")
-        show_grid(df_est, "est_grid")
+        df_est = df_filtered[(df_filtered["Survey Category"] != "") & (df_filtered["Date Of Est Appr Launch"] == "")]
+        st.write(f"Pending Estimates: **{len(df_est)}**")
+        show_grid(df_est, "grid2")
 
 else:
-    st.info("👋 Please upload an Excel or CSV file to begin tracking.")
+    st.info("Please upload your file.")
