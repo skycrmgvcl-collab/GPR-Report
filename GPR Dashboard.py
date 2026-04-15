@@ -24,7 +24,7 @@ if file:
     for col in df_raw.columns:
         df_raw[col] = df_raw[col].astype(str).str.strip().replace(['NULL', 'null', 'nan', 'NaN', 'None', 'NAT'], "")
 
-    # Sidebar Filters (Restored)
+    # Sidebar Filters
     st.sidebar.header("🔍 Filters")
     unique_schemes = sorted([x for x in df_raw["Name Of Scheme"].unique() if x != ""])
     sel_schemes = st.sidebar.multiselect("Scheme", unique_schemes, default=unique_schemes)
@@ -47,7 +47,7 @@ if file:
         ]
 
     # -----------------------------------------------------------
-    # FULL SURVEY FORM JAVASCRIPT (All Fields Restored)
+    # SURVEY FORM JAVASCRIPT (Your Perfect Form)
     # -----------------------------------------------------------
     render_print_button = JsCode("""
     class PrintRenderer {
@@ -84,7 +84,6 @@ if file:
                         <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
                         <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
                         <div class="title">Survey Form</div>
-
                         <table>
                             <tr>
                                 <td colspan="2">તારીખ :- __________</td>
@@ -155,29 +154,51 @@ if file:
     # -----------------------------------------------------------
     # GRID RENDERER
     # -----------------------------------------------------------
-    def show_grid(data, key):
+    def show_grid(data, key, show_print=True):
         gb = GridOptionsBuilder.from_dataframe(data)
         gb.configure_default_column(resizable=True, filter=True, sortable=True)
-        gb.configure_column("Print", headerName="Action", cellRenderer=render_print_button, width=110, pinned='left')
+        
+        if show_print:
+            gb.configure_column("Print", headerName="Action", cellRenderer=render_print_button, width=110, pinned='left')
+        
         gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=15)
         
         AgGrid(data, gridOptions=gb.build(), height=500, theme="streamlit", 
                allow_unsafe_jscode=True, key=key, reload_data=True)
 
     # -----------------------------------------------------------
-    # TABS
+    # TABS & LOGIC
     # -----------------------------------------------------------
-    t1, t2, t3 = st.tabs(["📋 Survey", "📐 Estimate", "💰 FQ"])
+    t1, t2, t3 = st.tabs(["📋 Survey Pending", "📐 Estimate Pending", "💰 FQ Pending"])
 
     with t1:
-        df_survey = df_filtered[(df_filtered["Survey Category"] == "") & (df_filtered["SR Status"].str.upper() == "OPEN")]
+        # LOGIC: No survey category assigned yet
+        df_survey = df_filtered[
+            (df_filtered["Survey Category"] == "") & 
+            (df_filtered["SR Status"].str.upper() == "OPEN")
+        ]
         st.write(f"Pending Surveys: **{len(df_survey)}**")
-        show_grid(df_survey, "grid1")
+        show_grid(df_survey, "grid1", show_print=True)
 
     with t2:
-        df_est = df_filtered[(df_filtered["Survey Category"] != "") & (df_filtered["Date Of Est Appr Launch"] == "")]
+        # LOGIC: Survey done (Category A/B/C/D exists) but Estimate not launched
+        df_est = df_filtered[
+            (df_filtered["Survey Category"] != "") & 
+            (df_filtered["Date Of Est Appr Launch"] == "") &
+            (df_filtered["SR Status"].str.upper() == "OPEN")
+        ]
         st.write(f"Pending Estimates: **{len(df_est)}**")
-        show_grid(df_est, "grid2")
+        show_grid(df_est, "grid2", show_print=False)
+
+    with t3:
+        # LOGIC: Estimate launched but FQ (Firm Quotation) not issued
+        df_fq = df_filtered[
+            (df_filtered["Date Of Est Appr Launch"] != "") & 
+            (df_filtered["Date Of FQ Issued"] == "") &
+            (df_filtered["SR Status"].str.upper() == "OPEN")
+        ]
+        st.write(f"Pending FQ Issuance: **{len(df_fq)}**")
+        show_grid(df_fq, "grid3", show_print=False)
 
 else:
-    st.info("Please upload your file.")
+    st.info("Please upload your file (Excel or CSV) to begin tracking.")
