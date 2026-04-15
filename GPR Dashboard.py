@@ -20,8 +20,8 @@ def create_print_html(row):
 <html>
 <head>
 <meta charset="UTF-8">
-
 <style>
+
 @page {{ size:A4; margin:2mm; }}
 
 body {{
@@ -172,19 +172,29 @@ def display_grid(df, print_enable=False, grid_key="grid"):
 
     df = df.copy().fillna("").reset_index(drop=True)
 
+    # ✅ Convert all columns to string (critical fix)
+    for col in df.columns:
+        df[col] = df[col].astype(str)
+
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(filter=True, sortable=True, resizable=True)
+
     AgGrid(
         df,
-        height=min(650,120+len(df)*30),
+        gridOptions=gb.build(),
+        height=500,
+        enable_enterprise_modules=False,
         fit_columns_on_grid_load=True,
         key=grid_key
     )
 
+    # -------- PRINT SECTION --------
     if print_enable:
 
         st.markdown("### 🖨 Print Survey Form")
 
         selected_index = st.number_input(
-            "Enter Sr No to Print",
+            "Enter Sr No",
             min_value=1,
             max_value=len(df),
             step=1,
@@ -219,6 +229,7 @@ if file:
     df = pd.read_csv(file) if file.name.endswith("csv") else pd.read_excel(file)
 
     df.columns = df.columns.str.strip()
+    df = df.fillna("")
 
     df = df[df["SR Status"].str.upper() != "CLOSED"]
 
@@ -257,7 +268,11 @@ if file:
              (df["SR Status"]=="OPEN")].copy()
     df3["Aging Days"] = (today - df3["Date Of Est Appr Launch"]).dt.days
 
-    st.metric("Total SR", len(df1)+len(df2)+len(df3))
+    col1,col2,col3,col4=st.columns(4)
+    col1.metric("Survey Pending",len(df1))
+    col2.metric("Estimate Pending",len(df2))
+    col3.metric("FQ Pending",len(df3))
+    col4.metric("Total SR",len(df1)+len(df2)+len(df3))
 
     tab1, tab2, tab3 = st.tabs(["Survey","Estimate","FQ"])
 
