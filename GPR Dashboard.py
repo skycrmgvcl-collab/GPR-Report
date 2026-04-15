@@ -5,195 +5,209 @@ import base64
 
 st.set_page_config(page_title="Subdivision SR Dashboard", layout="wide")
 
-# -----------------------------------------------------------
-# 1. GUJARATI PRINT HTML GENERATOR
-# -----------------------------------------------------------
-def create_print_html(row_json):
-    # This HTML is used by the JavaScript to populate the print window
-    html_template = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        @page {{ size: A4; margin: 10mm; }}
-        body {{ font-family: 'Noto Sans Gujarati', sans-serif; line-height: 1.6; color: #333; }}
-        .header {{ text-align: center; font-size: 22px; font-weight: bold; border-bottom: 2px solid #000; }}
-        .title {{ text-align: center; font-size: 18px; text-decoration: underline; margin: 10px 0; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
-        td {{ border: 1px solid #000; padding: 10px; vertical-align: top; }}
-        .label {{ font-weight: bold; background-color: #f9f9f9; width: 30%; }}
-        .sketch {{ height: 350px; border: 1px solid #000; margin-top: 10px; position: relative; }}
-        .sr-box {{ font-size: 20px; font-weight: bold; color: #d32f2f; border: 2px solid #d32f2f; padding: 5px; }}
-    </style>
-</head>
-<body>
-    <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
-    <div class="title">સર્વે ફોર્મ (Survey Form) - વિરપુર સબ ડિવિઝન</div>
-    
-    <table>
-        <tr>
-            <td class="label">અરજદારનું નામ</td>
-            <td colspan="2">{row_json.get('Name Of Applicant', '')}</td>
-        </tr>
-        <tr>
-            <td class="label">સરનામું</td>
-            <td colspan="2">
-                {row_json.get('Address1', '')}, {row_json.get('Address2', '')}, 
-                {row_json.get('Village Or City', '')}, {row_json.get('Taluka', '')}
-            </td>
-        </tr>
-        <tr>
-            <td class="label">SR Number</td>
-            <td class="sr-box">{row_json.get('SR Number', '')}</td>
-            <td>મોબાઈલ: {row_json.get('Mobile Number', '')}</td>
-        </tr>
-        <tr>
-            <td class="label">વપરાશ વિગત</td>
-            <td colspan="2">
-                કેટેગરી: {row_json.get('Consumer Category', '')} | 
-                લોડ: {row_json.get('Demand Load', '')} {row_json.get('Load Uom', '')}
-            </td>
-        </tr>
-    </table>
-
-    <div style="margin-top:20px;"><b>નકશો (Sketch):</b></div>
-    <div class="sketch"></div>
-
-    <script>
-        document.fonts.ready.then(function() {{
-            window.print();
-            // Optional: window.close();
-        }});
-    </script>
-</body>
-</html>
-"""
-    return base64.b64encode(html_template.encode('utf-8')).decode('utf-8')
-
-# -----------------------------------------------------------
-# 2. APP UI & FILTERS
-# -----------------------------------------------------------
 st.title("⚡ Subdivision SR Monitoring Dashboard")
 
+# -----------------------------------------------------------
+# 1. JAVASCRIPT FOR PRINTING (Injected into browser)
+# -----------------------------------------------------------
+# This creates a function in your browser that builds the Gujarati PDF 
+# from the row data without needing to talk back to the server.
+js_print_script = """
+<script>
+window.printRow = function(data) {
+    const htmlContent = `
+        <html>
+        <head>
+            <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Noto Sans Gujarati', sans-serif; padding: 30px; line-height: 1.6; }
+                .header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+                .subheader { text-align: center; font-size: 16px; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+                table { width: 100%; border-collapse: collapse; }
+                td { border: 1px solid black; padding: 12px; vertical-align: top; }
+                .label { font-weight: bold; background-color: #f2f2f2; width: 30%; }
+                .sr-no { font-size: 22px; font-weight: bold; color: red; }
+                .sketch { border: 1px solid black; height: 350px; margin-top: 20px; position: relative; }
+                .sketch-text { position: absolute; top: 40%; left: 35%; color: #ccc; font-size: 30px; transform: rotate(-30deg); }
+            </style>
+        </head>
+        <body>
+            <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
+            <div class="subheader">(ઓ. એન્ડ. એમ.) સબ ડિવિઝન, વિરપુર</div>
+            <h2 style="text-align:center; text-decoration: underline;">સર્વે ફોર્મ (Survey Form)</h2>
+            
+            <table>
+                <tr>
+                    <td class="label">અરજદારનું નામ</td>
+                    <td colspan="2">${data['Name Of Applicant'] || ''}</td>
+                </tr>
+                <tr>
+                    <td class="label">સરનામું</td>
+                    <td colspan="2">
+                        ${data['Address1'] || ''} ${data['Address2'] || ''},<br>
+                        ${data['Village Or City'] || ''}, ${data['Taluka'] || ''}, ${data['District'] || ''}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">SR Number</td>
+                    <td class="sr-no">${data['SR Number'] || ''}</td>
+                    <td><b>મોબાઈલ:</b> ${data['Mobile Number'] || ''}</td>
+                </tr>
+                <tr>
+                    <td class="label">વપરાશની વિગત</td>
+                    <td colspan="2">
+                        હેતુ: ${data['Consumer Category'] || ''} | 
+                        Type: ${data['SR Type'] || ''} | 
+                        Load: ${data['Demand Load'] || ''} ${data['Load Uom'] || ''}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">રજીસ્ટ્રેશન ચાર્જ</td>
+                    <td colspan="2">MR No: ${data['RC MR NO'] || ''} | Amount: ${data['RC Charge'] || ''}</td>
+                </tr>
+            </table>
+
+            <div class="sketch">
+                <div class="sketch-text">નકશો (SKETCH)</div>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right;">
+                <p>સર્વે કરનારની સહી: __________________</p>
+            </div>
+
+            <script>
+                // Wait for Gujarati font to load before opening print dialog
+                document.fonts.ready.then(() => {
+                    window.print();
+                    // window.close(); // Optional: closes tab after print
+                });
+            </script>
+        </body>
+        </html>
+    `;
+    var w = window.open('', '_blank');
+    w.document.write(htmlContent);
+    w.document.close();
+}
+</script>
+"""
+st.components.v1.html(js_print_script, height=0)
+
+# -----------------------------------------------------------
+# 2. DATA LOADING & FILTERING
+# -----------------------------------------------------------
 file = st.file_uploader("Upload Excel/CSV", type=["xls","xlsx","csv"])
 
 if file:
-    # Load and Clean
-    df = pd.read_csv(file) if file.name.endswith('csv') else pd.read_excel(file)
-    df.columns = df.columns.str.strip()
-    
-    # Clean "NULL" and strings
-    for col in df.columns:
-        df[col] = df[col].astype(str).str.strip().replace(['NULL', 'null', 'nan', 'NaN', 'None'], "")
+    # Read Data
+    if file.name.endswith("csv"):
+        df_raw = pd.read_csv(file, encoding="utf-8-sig")
+    else:
+        df_raw = pd.read_excel(file)
 
-    # Sidebar Filters (Restored)
-    st.sidebar.header("Global Filters")
-    all_schemes = sorted(df["Name Of Scheme"].unique())
-    sel_schemes = st.sidebar.multiselect("Select Scheme", all_schemes, default=all_schemes)
-    
-    all_types = sorted(df["SR Type"].unique())
-    sel_types = st.sidebar.multiselect("Select SR Type", all_types, default=all_types)
+    # Clean data & Handle "NULL" strings
+    df_raw.columns = df_raw.columns.str.strip()
+    for col in df_raw.columns:
+        df_raw[col] = df_raw[col].astype(str).str.strip().replace(['NULL', 'null', 'nan', 'NaN', 'None'], "")
 
-    # Apply Filters
-    df = df[df["Name Of Scheme"].isin(sel_schemes) & df["SR Type"].isin(sel_types)]
+    # Sidebar Filters
+    st.sidebar.header("🔍 Filters")
+    
+    unique_schemes = sorted([x for x in df_raw["Name Of Scheme"].unique() if x != ""])
+    sel_schemes = st.sidebar.multiselect("Select Scheme", unique_schemes, default=unique_schemes)
+    
+    unique_types = sorted([x for x in df_raw["SR Type"].unique() if x != ""])
+    sel_types = st.sidebar.multiselect("Select SR Type", unique_types, default=unique_types)
+
+    # Search Bar
+    search_query = st.sidebar.text_input("Search Name or SR Number")
+
+    # APPLY FILTERS TO DATAFRAME
+    df_filtered = df_raw[
+        (df_raw["Name Of Scheme"].isin(sel_schemes)) & 
+        (df_raw["SR Type"].isin(sel_types))
+    ]
+
+    if search_query:
+        df_filtered = df_filtered[
+            df_filtered["SR Number"].str.contains(search_query, case=False) | 
+            df_filtered["Name Of Applicant"].str.contains(search_query, case=False)
+        ]
 
     # -----------------------------------------------------------
-    # 3. AG-GRID WITH PRINT ICON COLUMN
+    # 3. GRID WITH ACTION COLUMN
     # -----------------------------------------------------------
     
-    # JavaScript logic for the Print Icon
-    # It creates a clickable '🖨️' icon that opens a new window with the HTML
-    cells_renderer = JsCode("""
-    class PrintCellRenderer {
+    # This bit of JS code creates the button inside the AgGrid row
+    render_print_button = JsCode("""
+    class PrintRenderer {
         init(params) {
             this.eGui = document.createElement('div');
-            this.eGui.innerHTML = '<button style="cursor:pointer; background-color:#ffa500; border:none; border-radius:4px; padding:2px 8px;">🖨️ Print</button>';
+            this.eGui.innerHTML = `
+                <button style="background-color: #2e7d32; color: white; border: none; 
+                border-radius: 4px; cursor: pointer; padding: 4px 10px; font-weight: bold;">
+                🖨️ PDF
+                </button>
+            `;
             this.btn = this.eGui.querySelector('button');
-            this.btn.addEventListener('click', () => {
-                let rowData = params.data;
-                // We fetch the B64 string from a hidden logic or reconstruct it
-                // To keep it simple, we use a custom event or a window function
-                window.printRow(rowData);
-            });
+            this.btn.addEventListener('click', () => window.printRow(params.data));
         }
         getGui() { return this.eGui; }
     }
     """)
 
-    def display_tab_grid(data, key):
+    def show_grid(data, grid_key):
         gb = GridOptionsBuilder.from_dataframe(data)
         gb.configure_default_column(resizable=True, filter=True, sortable=True)
         
-        # Add the Print Column at the start
+        # ADD THE PRINT COLUMN (Action Column)
         gb.configure_column(
-            "Print", 
+            "Print_Action", 
             headerName="Action", 
-            cellRenderer=cells_renderer, 
+            cellRenderer=render_print_button, 
             width=100, 
             pinned='left'
         )
         
-        grid_options = gb.build()
+        # Configure Pagination
+        gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=15)
         
-        # Inject JavaScript into the browser to handle the window.printRow call
-        # We need to generate the HTML content for the specific row clicked
-        st.components.v1.html(f"""
-            <script>
-            window.printRow = function(data) {{
-                // Construct the HTML content locally in JS to avoid round-trips
-                const htmlContent = `
-                    <html>
-                    <head>
-                        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati&display=swap" rel="stylesheet">
-                        <style>
-                            body {{ font-family: 'Noto Sans Gujarati', sans-serif; padding: 20px; }}
-                            table {{ width: 100%; border-collapse: collapse; }}
-                            td {{ border: 1px solid black; padding: 8px; }}
-                            .header {{ text-align: center; font-weight: bold; font-size: 20px; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="header">મધ્ય ગુજરાત વીજ કંપની લી.</div>
-                        <h3 style="text-align:center">સર્વે ફોર્મ</h3>
-                        <table>
-                            <tr><td>અરજદાર:</td><td>${{data['Name Of Applicant'] || ''}}</td></tr>
-                            <tr><td>સરનામું:</td><td>${{data['Address1'] || ''}}, ${{data['Village Or City'] || ''}}</td></tr>
-                            <tr><td>SR No:</td><td><b>${{data['SR Number'] || ''}}</b></td></tr>
-                            <tr><td>કેટેગરી:</td><td>${{data['Consumer Category'] || ''}}</td></tr>
-                        </table>
-                        <div style="margin-top:30px; border:1px solid black; height:300px;">નકશો (Sketch)</div>
-                    </body>
-                    <script>
-                        document.fonts.ready.then(() => {{ window.print(); }});
-                    </script>
-                    </html>
-                `;
-                var w = window.open('', '_blank');
-                w.document.write(htmlContent);
-                w.document.close();
-            }}
-            </script>
-        """, height=0)
-
+        gridOptions = gb.build()
+        
         AgGrid(
             data, 
-            gridOptions=grid_options, 
-            allow_unsafe_jscode=True, 
+            gridOptions=gridOptions, 
+            height=500, 
             theme="streamlit", 
-            key=key,
-            height=500
+            allow_unsafe_jscode=True, 
+            key=grid_key,
+            reload_data=True # This ensures grid updates when sidebar filters change
         )
 
-    # Tabs
+    # -----------------------------------------------------------
+    # 4. TABS & STAGES
+    # -----------------------------------------------------------
     t1, t2, t3 = st.tabs(["📋 Survey Pending", "📐 Estimate Pending", "💰 FQ Pending"])
-    
-    df_survey = df[(df["Survey Category"] == "") & (df["SR Status"].str.upper() == "OPEN")]
+
+    # Stage 1 Filter: Survey Category is empty and Status is OPEN
+    df_survey = df_filtered[
+        (df_filtered["Survey Category"] == "") & 
+        (df_filtered["SR Status"].str.upper() == "OPEN")
+    ]
 
     with t1:
-        st.write(f"Showing {len(df_survey)} records")
-        display_tab_grid(df_survey, "g1")
+        st.write(f"Total Found: **{len(df_survey)}**")
+        if not df_survey.empty:
+            show_grid(df_survey, "grid_survey")
+        else:
+            st.warning("No rows match the filters in this category.")
+
+    with t2:
+        df_est = df_filtered[
+            (df_filtered["Survey Category"] != "") & 
+            (df_filtered["Date Of Est Appr Launch"] == "")
+        ]
+        show_grid(df_est, "grid_estimate")
 
 else:
-    st.info("Please upload a file to see the dashboard.")
+    st.info("👋 Welcome! Please upload your Excel or CSV file to begin.")
