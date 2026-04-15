@@ -1,8 +1,8 @@
 streamlit==1.32.2
-pandas==2.2.2
+pandas==2.1.4
 openpyxl==3.1.2
 plotly==5.18.0
 xlrd
 python-docx
-streamlit-aggrid
-xlsxwriter
+streamlit-aggrid==0.3.4.post3
+xlsxwriter==3.1.9
