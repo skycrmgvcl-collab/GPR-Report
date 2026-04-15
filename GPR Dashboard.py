@@ -10,7 +10,7 @@ st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ Tracking")
 
 # -----------------------------------------------------------
-# SURVEY FORM (Gujarati + A4 + Google Font)
+# SURVEY FORM (Gujarati + A4)
 # -----------------------------------------------------------
 
 def create_print_html(row):
@@ -21,15 +21,13 @@ def create_print_html(row):
 <head>
 <meta charset="UTF-8">
 
-<!-- Gujarati Font -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati&display=swap" rel="stylesheet">
 
 <style>
-
 @page {{ size:A4; margin:2mm; }}
 
 body {{
-font-family: 'Noto Sans Gujarati','Nirmala UI','Shruti','Arial Unicode MS',sans-serif;
+font-family: 'Noto Sans Gujarati','Nirmala UI','Shruti',sans-serif;
 font-size:13px;
 margin:0;
 }}
@@ -61,7 +59,6 @@ height:70px;
 font-weight:bold;
 font-size:17px;
 }}
-
 </style>
 </head>
 
@@ -169,14 +166,14 @@ font-size:17px;
     return base64.b64encode(html.encode("utf-8")).decode()
 
 # -----------------------------------------------------------
-# GRID (SAFE VERSION)
+# GRID FUNCTION (SAFE)
 # -----------------------------------------------------------
 
 def display_grid(df, print_enable=False, grid_key="grid"):
 
     df = df.copy().fillna("").reset_index(drop=True)
 
-    # Convert all to string (critical for stability)
+    # Convert all columns to string
     for col in df.columns:
         df[col] = df[col].astype(str)
 
@@ -191,12 +188,23 @@ def display_grid(df, print_enable=False, grid_key="grid"):
         key=grid_key
     )
 
-    # Print section
+    # Print Section
     if print_enable:
 
         st.markdown("### 🖨 Print Survey Form")
 
-        idx = st.number_input("Enter Sr No", 1, len(df), 1, key=f"num_{grid_key}")
+        if len(df) == 0:
+            st.warning("No records available to print")
+            return
+
+        idx = st.number_input(
+            "Enter Sr No",
+            min_value=1,
+            max_value=len(df),
+            value=1,
+            step=1,
+            key=f"num_{grid_key}"
+        )
 
         if st.button("Print Selected", key=f"btn_{grid_key}"):
 
