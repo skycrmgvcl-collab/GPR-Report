@@ -10,7 +10,7 @@ st.title("⚡ Subdivision SR Monitoring Dashboard")
 st.caption("Survey → Estimate → FQ Tracking")
 
 # -----------------------------------------------------------
-# SURVEY FORM (A4 FULL PAGE)
+# SURVEY FORM (Gujarati + A4 + Google Font)
 # -----------------------------------------------------------
 
 def create_print_html(row):
@@ -20,12 +20,16 @@ def create_print_html(row):
 <html>
 <head>
 <meta charset="UTF-8">
+
+<!-- Gujarati Font -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati&display=swap" rel="stylesheet">
+
 <style>
 
 @page {{ size:A4; margin:2mm; }}
 
 body {{
-font-family:'Nirmala UI','Shruti',sans-serif;
+font-family: 'Noto Sans Gujarati','Nirmala UI','Shruti','Arial Unicode MS',sans-serif;
 font-size:13px;
 margin:0;
 }}
@@ -172,7 +176,7 @@ def display_grid(df, print_enable=False, grid_key="grid"):
 
     df = df.copy().fillna("").reset_index(drop=True)
 
-    # ✅ Convert all columns to string (critical fix)
+    # Convert all to string (critical for stability)
     for col in df.columns:
         df[col] = df[col].astype(str)
 
@@ -183,28 +187,20 @@ def display_grid(df, print_enable=False, grid_key="grid"):
         df,
         gridOptions=gb.build(),
         height=500,
-        enable_enterprise_modules=False,
         fit_columns_on_grid_load=True,
         key=grid_key
     )
 
-    # -------- PRINT SECTION --------
+    # Print section
     if print_enable:
 
         st.markdown("### 🖨 Print Survey Form")
 
-        selected_index = st.number_input(
-            "Enter Sr No",
-            min_value=1,
-            max_value=len(df),
-            step=1,
-            key=f"num_{grid_key}"
-        )
+        idx = st.number_input("Enter Sr No", 1, len(df), 1, key=f"num_{grid_key}")
 
         if st.button("Print Selected", key=f"btn_{grid_key}"):
 
-            row = df.iloc[selected_index-1]
-
+            row = df.iloc[idx-1]
             html = create_print_html(row)
 
             js = f"""
@@ -226,7 +222,10 @@ file = st.file_uploader("Upload Excel / CSV", type=["xls","xlsx","csv"])
 
 if file:
 
-    df = pd.read_csv(file) if file.name.endswith("csv") else pd.read_excel(file)
+    if file.name.endswith("csv"):
+        df = pd.read_csv(file, encoding="utf-8-sig")
+    else:
+        df = pd.read_excel(file)
 
     df.columns = df.columns.str.strip()
     df = df.fillna("")
@@ -268,11 +267,11 @@ if file:
              (df["SR Status"]=="OPEN")].copy()
     df3["Aging Days"] = (today - df3["Date Of Est Appr Launch"]).dt.days
 
-    col1,col2,col3,col4=st.columns(4)
-    col1.metric("Survey Pending",len(df1))
-    col2.metric("Estimate Pending",len(df2))
-    col3.metric("FQ Pending",len(df3))
-    col4.metric("Total SR",len(df1)+len(df2)+len(df3))
+    col1,col2,col3,col4 = st.columns(4)
+    col1.metric("Survey Pending", len(df1))
+    col2.metric("Estimate Pending", len(df2))
+    col3.metric("FQ Pending", len(df3))
+    col4.metric("Total SR", len(df1)+len(df2)+len(df3))
 
     tab1, tab2, tab3 = st.tabs(["Survey","Estimate","FQ"])
 
